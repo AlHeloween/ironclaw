@@ -1415,6 +1415,14 @@ impl SetupWizard {
 
         // Anthropic has a custom flow: API key or OAuth token from `claude login`.
         if provider_id == "anthropic" {
+            // Check if credentials already exist
+            if Self::existing_anthropic_credentials() {
+                print_info("Anthropic credentials already configured. Keep existing?");
+                if confirm("Keep existing credentials?", true).map_err(SetupError::Io)? {
+                    print_success("Keeping existing Anthropic configuration");
+                    return Ok(());
+                }
+            }
             return self.setup_anthropic().await;
         }
 
@@ -1484,6 +1492,10 @@ impl SetupWizard {
             return Some(token);
         }
         None
+    }
+
+    fn existing_anthropic_credentials() -> bool {
+        Self::detect_anthropic_key().is_some()
     }
 
     /// Update the selected LLM backend while preserving the current model when

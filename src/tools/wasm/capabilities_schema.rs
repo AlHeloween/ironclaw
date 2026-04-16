@@ -898,7 +898,7 @@ mod tests {
         let json = r#"{
             "tool_invoke": {
                 "aliases": {
-                    "search": "brave_search",
+                    "search": "firecrawl_search",
                     "calc": "calculator"
                 },
                 "rate_limit": {
@@ -912,7 +912,7 @@ mod tests {
         let tool_invoke = caps.tool_invoke.unwrap();
         assert_eq!(
             tool_invoke.aliases.get("search"),
-            Some(&"brave_search".to_string())
+            Some(&"firecrawl_search".to_string())
         );
         let rate = tool_invoke.rate_limit.unwrap();
         assert_eq!(rate.requests_per_minute, 10);

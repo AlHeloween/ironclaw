@@ -1,0 +1,42 @@
+{
+  // ============================================================
+  // Local Code Search Configuration (Future Feature)
+  // ============================================================
+  // This file configures local code indexing for hybrid search
+  // (Sourcegraph + local codebases). Currently a placeholder.
+  // ============================================================
+
+  "service": {
+    // Port for the local code search service
+    // "port": 3004,
+    // Bind address
+    // "bind_address": "127.0.0.1",
+    // Enable real-time file watching
+    // "watch_enabled": true,
+    // Watch debounce interval in milliseconds
+    // "watch_debounce_ms": 500
+  },
+
+  "indexes": [
+    {
+      // Unique name for this index
+      // "name": "ironclaw",
+      // Absolute path to the repository/folder
+      // "path": "D:\\zPython\\ironclaw",
+      // Languages to index (default: ["all"])
+      // Supported: "rust", "ts", "js", "py", "go", "java", "c", "cpp", etc.
+      // "languages": ["rust", "ts", "py"],
+      // File patterns to include (default: all)
+      // "include": ["*.rs", "*.ts", "*.py"],
+      // File patterns to exclude (default: node_modules, .git, target, etc.)
+      // "exclude": ["target/", "node_modules/", ".git/"],
+      // Enable symbol extraction (default: true)
+      // "symbols_enabled": true,
+      // Maximum file size to index in bytes (default: 1MB)
+      // "max_file_size": 1048576,
+      // Enable this index (default: true)
+      // "enabled": true
+    }
+    // Add more indexes as needed...
+  ]
+}

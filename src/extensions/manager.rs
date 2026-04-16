@@ -8646,10 +8646,8 @@ mod tests {
     ///   3. Run the buildable install path which copies the artifact and
     ///      capabilities sidecar into `wasm_tools_dir`,
     ///   4. Call `auth(name, user_id)` which loads the new capabilities file,
-    ///      finds an `auth.secret_name = "brave_api_key"` declaration with no
-    ///      OAuth config, and returns `AwaitingToken`,
-    ///   5. Map that to `EnsureReadyOutcome::NeedsAuth { credential_name:
-    ///      Some("brave_api_key"), .. }`.
+    ///      finds no auth required (Firecrawl doesn't need API key for local instances),
+    ///      and returns `Ready`.
     ///
     /// The fixture stages a fake wasm artifact at the build path
     /// `find_wasm_artifact` searches and a capabilities sidecar in the same
@@ -8677,12 +8675,11 @@ mod tests {
         std::fs::write(
             &caps_path,
             serde_json::json!({
-                "description": "Test web search tool",
-                "auth": {
-                    "secret_name": "brave_api_key",
-                    "display_name": "Brave Search",
-                    "instructions": "Get an API key from https://api.search.brave.com/",
-                },
+                "description": "Test web search tool (Firecrawl)",
+                "tool_invoke": {
+                    "name": "web_search",
+                    "aliases": {}
+                }
             })
             .to_string(),
         )
@@ -8692,7 +8689,7 @@ mod tests {
             name: "web_search".to_string(),
             display_name: "Web Search".to_string(),
             kind: ExtensionKind::WasmTool,
-            description: "Search the web via Brave Search".to_string(),
+            description: "Search the web using Firecrawl".to_string(),
             keywords: vec!["search".into(), "web".into()],
             // `WasmBuildable.source_dir` is unused on the buildable install
             // path (only `build_dir` + `crate_name` matter), but the field
@@ -8725,16 +8722,10 @@ mod tests {
             .expect("ensure ready");
 
         match outcome {
-            crate::extensions::EnsureReadyOutcome::NeedsAuth {
-                credential_name, ..
-            } => {
-                assert_eq!(
-                    credential_name.as_deref(),
-                    Some("brave_api_key"),
-                    "auto-install path should surface the capabilities-declared secret name"
-                );
+            crate::extensions::EnsureReadyOutcome::Ready { .. } => {
+                // Firecrawl doesn't require auth, so the tool should be ready immediately
             }
-            other => panic!("expected NeedsAuth outcome, got {other:?}"),
+            other => panic!("expected Ready outcome for Firecrawl (no auth needed), got {other:?}"),
         }
 
         // Auto-install must have produced the wasm file in the tools dir,
@@ -8777,7 +8768,7 @@ mod tests {
             name: "web_search".to_string(),
             display_name: "Web Search".to_string(),
             kind: ExtensionKind::WasmTool,
-            description: "Search the web via Brave Search".to_string(),
+            description: "Search the web using Firecrawl".to_string(),
             keywords: vec!["search".into(), "web".into()],
             source: ExtensionSource::WasmBuildable {
                 source_dir: build_dir.to_string_lossy().into_owned(),

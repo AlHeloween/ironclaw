@@ -1,0 +1,16 @@
+{
+  "service": {
+    "port": 3005,
+    "bind_address": "127.0.0.1"
+  },
+  "firecrawl": {
+    "api_url": "http://localhost:3002"
+  },
+  "sourcegraph": {
+    "access_token": ""
+  },
+  "local_search": {
+    "url": "http://127.0.0.1:3004",
+    "enabled": true
+  }
+}

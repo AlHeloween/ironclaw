@@ -355,7 +355,7 @@ mod live_tests {
         // extension fired the gate. Before the post-flight detector
         // landed, the agent would silently fall back to a
         // tool_install/web_search recovery loop and trigger an
-        // AuthRequired for `brave_api_key` instead of pausing on the
+        // AuthRequired for a missing credential instead of pausing on the
         // Drive failure. A loose `is_some()` check would let that
         // regression slip through.
         let auth_required_events: Vec<_> = phase_a_status
@@ -744,7 +744,7 @@ mod live_tests {
         // CRITICAL assertion #3: the response must not be a Drive
         // auth-required prompt. We allow other extensions' gates to
         // fire (e.g. the agent may try web_search after pulling Drive
-        // content and hit brave_api_key) — that's a *different*
+        // content and hit a missing credential) — that's a *different*
         // extension and unrelated to the Google refresh path we're
         // verifying.
         let joined = response_text.join("\n").to_lowercase();

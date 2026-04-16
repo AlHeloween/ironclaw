@@ -1,0 +1,20 @@
+﻿{
+  "created_utc": "2026-04-16T10:03:38Z",
+  "cwd": "D:\\zPython\\ironclaw\\src\\firecrawl-search-service",
+  "backend": "windows-conpty",
+  "cols": 120,
+  "rows": 30,
+  "timeout_s": 120,
+  "max_log_mb": 50,
+  "terminal_host": "conhost",
+  "argv": [
+    "./target/release/firecrawl-search-service.exe"
+  ],
+  "normalized_argv": [
+    "./target/release/firecrawl-search-service.exe"
+  ],
+  "wrapper_kind": null,
+  "wrapper_path": null,
+  "env_overrides": {
+  }
+}

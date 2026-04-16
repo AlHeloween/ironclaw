@@ -49,7 +49,9 @@ async def _get_extension(base_url: str, name: str) -> dict | None:
 async def _ensure_removed(base_url: str, name: str) -> None:
     extension = await _get_extension(base_url, name)
     if extension is not None:
-        response = await api_post(base_url, f"/api/extensions/{name}/remove", timeout=30)
+        response = await api_post(
+            base_url, f"/api/extensions/{name}/remove", timeout=30
+        )
         assert response.status_code == 200, response.text
         assert response.json().get("success") is True, response.text
 
@@ -78,32 +80,37 @@ async def _install_extension(
 
 
 async def test_remove_wasm_tool_deletes_unique_secret(extension_cleanup_server):
+    """Removing a WASM tool that had secrets deletes those secrets from the DB.
+
+    Note: web_search (Firecrawl) no longer requires secrets, so this test
+    uses the slack tool which still requires an API key.
+    """
     server = extension_cleanup_server["base_url"]
     db_path = extension_cleanup_server["db_path"]
     user_id = extension_cleanup_server["gateway_user_id"]
 
-    await _ensure_removed(server, "web-search")
+    await _ensure_removed(server, "slack")
 
-    await _install_extension(server, "web-search")
+    await _install_extension(server, "slack")
 
     setup_response = await api_post(
         server,
-        "/api/extensions/web-search/setup",
-        json={"secrets": {"brave_api_key": "cleanup-test-key"}},
+        "/api/extensions/slack/setup",
+        json={"secrets": {"slack_bot_token": "cleanup-slack-token"}},
         timeout=30,
     )
     assert setup_response.status_code == 200, setup_response.text
     assert setup_response.json().get("success") is True, setup_response.text
-    assert _secret_exists(db_path, user_id, "brave_api_key")
+    assert _secret_exists(db_path, user_id, "slack_bot_token")
 
     remove_response = await api_post(
         server,
-        "/api/extensions/web-search/remove",
+        "/api/extensions/slack/remove",
         timeout=30,
     )
     assert remove_response.status_code == 200, remove_response.text
     assert remove_response.json().get("success") is True, remove_response.text
-    assert not _secret_exists(db_path, user_id, "brave_api_key")
+    assert not _secret_exists(db_path, user_id, "slack_bot_token")
 
 
 async def test_remove_wasm_channel_deletes_setup_secrets(extension_cleanup_server):
@@ -142,7 +149,9 @@ async def test_remove_wasm_channel_deletes_setup_secrets(extension_cleanup_serve
     assert not _secret_exists(db_path, user_id, "discord_public_key")
 
 
-async def test_remove_shared_google_oauth_secrets_after_last_tool(extension_cleanup_server):
+async def test_remove_shared_google_oauth_secrets_after_last_tool(
+    extension_cleanup_server,
+):
     server = extension_cleanup_server["base_url"]
     db_path = extension_cleanup_server["db_path"]
     user_id = extension_cleanup_server["gateway_user_id"]
@@ -178,7 +187,9 @@ async def test_remove_shared_google_oauth_secrets_after_last_tool(extension_clea
         "google_oauth_token_scopes",
     ]
     for secret_name in shared_secrets:
-        assert _secret_exists(db_path, user_id, secret_name), f"expected {secret_name} to exist"
+        assert _secret_exists(db_path, user_id, secret_name), (
+            f"expected {secret_name} to exist"
+        )
 
     gmail_remove_response = await api_post(
         server,
@@ -186,7 +197,9 @@ async def test_remove_shared_google_oauth_secrets_after_last_tool(extension_clea
         timeout=30,
     )
     assert gmail_remove_response.status_code == 200, gmail_remove_response.text
-    assert gmail_remove_response.json().get("success") is True, gmail_remove_response.text
+    assert gmail_remove_response.json().get("success") is True, (
+        gmail_remove_response.text
+    )
     for secret_name in shared_secrets:
         assert _secret_exists(db_path, user_id, secret_name), (
             f"{secret_name} should remain while google-drive is still installed"
@@ -198,7 +211,9 @@ async def test_remove_shared_google_oauth_secrets_after_last_tool(extension_clea
         timeout=30,
     )
     assert drive_remove_response.status_code == 200, drive_remove_response.text
-    assert drive_remove_response.json().get("success") is True, drive_remove_response.text
+    assert drive_remove_response.json().get("success") is True, (
+        drive_remove_response.text
+    )
     for secret_name in shared_secrets:
         assert not _secret_exists(db_path, user_id, secret_name), (
             f"{secret_name} should be deleted after the last Google tool is removed"
@@ -260,7 +275,9 @@ async def test_remove_mcp_server_deletes_stored_secrets(extension_cleanup_server
     assert remove_response.status_code == 200, remove_response.text
     assert remove_response.json().get("success") is True, remove_response.text
     remaining_secret_names = _secret_names(db_path, user_id)
-    assert not any(name.startswith("mcp_mock-mcp_") for name in remaining_secret_names), (
+    assert not any(
+        name.startswith("mcp_mock-mcp_") for name in remaining_secret_names
+    ), (
         f"mock-mcp secrets should be deleted on remove; remaining secrets were "
         f"{sorted(remaining_secret_names)}"
     )

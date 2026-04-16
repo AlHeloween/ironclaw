@@ -1,49 +1,107 @@
 ---
 title: "Web Search"
-description: "Let your agent search the web"
+description: "Let your agent search the web using Firecrawl"
 ---
 
-The Web Search tool allows your agent to use the [Brave Search API]() search the web for up-to-date information, making it ideal for answering questions about current events, finding specific data, or gathering general information.
+The Web Search tool allows your agent to search the web and scrape content using a self-hosted [Firecrawl](https://firecrawl.dev) instance. It returns clean markdown from web pages, handles JavaScript-rendered content, and requires no API key for local instances.
+
+The tool supports two modes:
+- **search**: Web search with full-page content extraction
+- **context**: Scrape a specific URL for RAG grounding
 
 ---
 
 ## Setup
 
-
 <Steps>
 
-<Step title="Get a Brave Search API Key">
-To use the Web Search tool, you need to obtain an API key from Brave Search. You can get one by signing up at https://api-dashboard.search.brave.com 
+<Step title="Start a Firecrawl Instance">
 
-<Info>
+### Local (Recommended)
 
-As of the time of writing, Brave Search API offers 5$ of free credits per month on their basic plan, which is more than enough for testing and small-scale use.
+Firecrawl can be self-hosted for free. If you have the IronClaw repository checked out:
 
-</Info>
+```bash
+cd externals/firecrawl/apps/api
+pnpm install
+pnpm run start
+```
 
+The API will be available at `http://localhost:3002`.
+
+### Docker
+
+```bash
+docker run -d -p 3002:3002 --name firecrawl firecrawl/firecrawl
+```
+
+### Cloud API
+
+Use the hosted Firecrawl API at [firecrawl.dev](https://firecrawl.dev). You'll need an API key.
 
 </Step>
 
 <Step title="Install the Web Search Extension">
 
-To install the Web Search extension, run the following command in your terminal:
+The extension is included in the default registry. Install it with:
 
 ```bash
-ironclaw registry install web-search
+ironclaw registry install web_search
 ```
 
 </Step>
 
-<Step title="Configure the API Key">
+<Step title="Configure (Local)">
 
-After installing the extension, you need to configure your Brave Search API key in IronClaw. You can do this by running:
+For local instances, no API key is required. The tool automatically connects to `http://localhost:3002`.
+
+If your Firecrawl instance runs on a different URL, set the environment variable:
 
 ```bash
-ironclaw tool auth web-search
+export FIRECRAWL_API_URL=http://your-host:3002
 ```
 
-Then follow the prompts to enter your API key.
+</Step>
+
+<Step title="Configure (Cloud)">
+
+If using the cloud API, configure your API key:
+
+```bash
+ironclaw tool auth web_search
+```
+
+Or set the environment variable:
+
+```bash
+export FIRECRAWL_API_KEY=fc-YOUR_API_KEY
+export FIRECRAWL_API_URL=https://api.firecrawl.dev
+```
 
 </Step>
 
 </Steps>
+
+---
+
+## Usage
+
+### Web Search
+
+```json
+{
+  "query": "rust programming",
+  "mode": "search",
+  "count": 5
+}
+```
+
+### RAG Grounding
+
+```json
+{
+  "query": "summarize this page",
+  "mode": "context",
+  "url": "https://docs.rs"
+}
+```

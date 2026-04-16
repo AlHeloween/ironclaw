@@ -13,8 +13,7 @@ The Github extension allows your agent to interact with Github repositories, iss
 <Steps>
 
 <Step title="Get an API Key">
-To use the Github extension, you need to obtain an API key from Brave Search. You can get one by signing up at 
-
+To use the Github extension, you need to obtain a personal access token from GitHub. You can create one at https://github.com/settings/tokens
 
 </Step>
 

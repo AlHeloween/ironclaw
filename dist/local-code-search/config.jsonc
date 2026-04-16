@@ -1,0 +1,16 @@
+{
+  "service": {
+    "port": 3004,
+    "bind_address": "127.0.0.1",
+    "watch_enabled": true
+  },
+  "indexes": [
+    {
+      "name": "ironclaw",
+      "path": "../..",
+      "languages": ["all"],
+      "symbols_enabled": true,
+      "enabled": true
+    }
+  ]
+}

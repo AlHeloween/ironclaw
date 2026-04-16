@@ -3330,13 +3330,13 @@ mod tests {
             "required": ["query"]
         });
 
-        let hint = super::build_tool_usage_hint("web-search-tool", &schema);
+        let hint = super::build_tool_usage_hint("firecrawl-search-tool", &schema);
 
         assert!(
             !hint.contains("call tool_info"),
             "hint should not recommend tool_info for compact schemas; got: {hint}"
         );
-        assert!(hint.contains("Schema for web-search-tool"));
+        assert!(hint.contains("Schema for firecrawl-search-tool"));
         assert!(hint.contains("\"query\""));
         assert!(hint.contains("\"required\""));
     }

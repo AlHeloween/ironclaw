@@ -556,6 +556,8 @@ This document tracks feature parity between IronClaw (Rust implementation) and O
 - ✅ Shell env scrubbing + command injection detection
 - ✅ Tinfoil private inference provider
 - ✅ OpenAI-compatible / OpenRouter provider support
+- ✅ Local code search service (tantivy FTS + symbol extraction for Rust/TS/JS/Python)
+- ✅ Firecrawl search service (web search, URL scraping, Sourcegraph, hybrid mode)
 
 ### P1 - High Priority
 
@@ -618,5 +620,6 @@ IronClaw intentionally differs from OpenClaw in these ways:
 7. **Tinfoil private inference**: IronClaw-only provider for private/encrypted inference
 8. **GitHub WASM tool**: Native GitHub integration as WASM tool
 9. **Prompt-based skills**: Different approach than OpenClaw capability bundles (trust gating, attenuation)
+10. **Native search services**: Local code search (tantivy) and Firecrawl search (reqwest) as standalone binaries, not WASM tools
 
 These are intentional architectural choices, not gaps to be filled.

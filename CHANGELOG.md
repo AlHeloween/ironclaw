@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Local Code Search Service** — A native Rust binary that indexes local codebases and provides full-text + symbol search via HTTP API. Supports Rust, TypeScript, JavaScript, Python. Uses tantivy for BM25 search. Runs on port 3004. Config: `~/.ironclaw/local-code-search.jsonc`.
+
+- **Firecrawl Search Service** — A native Rust service providing web search, URL scraping, Sourcegraph code search, and hybrid mode (local + Sourcegraph). Runs on port 3005. Config: `~/.ironclaw/firecrawl-search.jsonc`.
+
+### Changed
+
+- Replace Brave Search API with Firecrawl for web search and RAG grounding. The `web_search` tool now uses Firecrawl with two modes: `search` (web search) and `context` (URL scraping). The `llm_context` tool is deprecated and aliased to `web_search` with `mode=context`. No API key required for self-hosted instances.
+
+- Add Sourcegraph integration to `firecrawl_search` tool via `mode: "sourcegraph"`. Search public codebases like Facebook React, Vue, TensorFlow, etc. directly from the agent. Uses Sourcegraph's public GraphQL API with optional access token (`SOURCEGRAPH_ACCESS_TOKEN`) for higher rate limits.
+
+- Add `mode: "hybrid"` to `firecrawl_search` tool that combines local code search results (first) with Sourcegraph public code search (second). Requires both the local code search service and Firecrawl search service to be running.
+
 ## [0.24.0](https://github.com/nearai/ironclaw/compare/ironclaw-v0.23.0...ironclaw-v0.24.0) - 2026-03-31
 
 ### Added

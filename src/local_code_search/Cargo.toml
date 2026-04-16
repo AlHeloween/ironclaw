@@ -1,0 +1,50 @@
+[package]
+name = "local-code-search"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.92"
+description = "Local code search service for IronClaw"
+authors = ["NEAR AI <support@near.ai>"]
+license = "MIT OR Apache-2.0"
+
+[workspace]
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# HTTP server
+actix-web = "4"
+actix-rt = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Full-text search
+tantivy = "0.22"
+
+# File system
+walkdir = "2"
+notify = "6"
+dirs = "5"
+
+# Configuration
+dotenvy = "0.15"
+serde_jsonc = "1.0"
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "2"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+clap = { version = "4", features = ["derive"] }
+regex = "1"
+md-5 = "0.10"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+
+[dev-dependencies]
+tempfile = "3"

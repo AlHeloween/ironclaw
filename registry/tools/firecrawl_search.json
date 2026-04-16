@@ -1,0 +1,33 @@
+{
+  "name": "firecrawl_search",
+  "display_name": "Firecrawl Search",
+  "kind": "tool",
+  "version": "0.1.0",
+  "wit_version": "0.3.0",
+  "description": "Search the web and scrape content using a self-hosted Firecrawl instance. Returns clean markdown from web pages, handles JavaScript-rendered content, and requires no API key for local instances.",
+  "keywords": [
+    "search",
+    "web",
+    "scrape",
+    "firecrawl",
+    "crawler",
+    "markdown"
+  ],
+  "source": {
+    "dir": "tools-src/firecrawl-search",
+    "capabilities": "firecrawl-search.capabilities.json",
+    "crate_name": "firecrawl-search-tool"
+  },
+  "auth_summary": {
+    "method": "none",
+    "provider": null,
+    "secrets": [],
+    "shared_auth": null,
+    "setup_url": "https://docs.firecrawl.dev/contributing/self-host"
+  },
+  "tags": [
+    "default",
+    "search",
+    "scrape"
+  ]
+}

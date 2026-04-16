@@ -1,0 +1,39 @@
+{
+  "$schema": "https://opencode.ai/schema/tool-capabilities-v1.json",
+  "version": "1.0.0",
+  "tool_invoke": {
+    "name": "firecrawl_search",
+    "description": "Search the web, scrape content, or search public codebases. Supports three modes: 'search' (web search via Firecrawl), 'context' (URL scraping for RAG), and 'sourcegraph' (public code search).",
+    "aliases": {
+      "web_search": "firecrawl_search",
+      "llm_context": "firecrawl_search",
+      "firecrawl_scrape": "firecrawl_search"
+    }
+  },
+  "http": {
+    "allowed": [
+      {
+        "method": "POST",
+        "host": "*",
+        "path": "/v1/search",
+        "description": "Firecrawl search API endpoint"
+      },
+      {
+        "method": "POST",
+        "host": "*",
+        "path": "/v1/scrape",
+        "description": "Firecrawl scrape API endpoint"
+      }
+    ]
+  },
+  "secrets": {
+    "allowed_names": ["firecrawl_api_key"]
+  },
+  "rate_limit": {
+    "requests_per_minute": 30,
+    "requests_per_hour": 500
+  },
+  "env": {
+    "allowed": ["FIRECRAWL_API_URL", "FIRECRAWL_API_KEY", "SOURCEGRAPH_ACCESS_TOKEN"]
+  }
+}

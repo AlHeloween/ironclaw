@@ -55,6 +55,8 @@ HEADED=1 pytest scenarios/
 | `test_tool_approval.py` | Approval card appears, buttons disable on approve/deny, parameters toggle via `page.evaluate("showApproval(...)")`; the waiting-approval regression uses a real HTTP tool call |
 | `test_extension_uninstall_cleanup.py` | Real install/setup/remove coverage for WASM tools, WASM channels, OAuth-backed shared Google tools, and MCP servers; verifies uninstall deletes stored secrets from the libSQL `secrets` table while preserving shared credentials until the last referencing extension is removed |
 | `test_oauth_refresh.py` | Hosted Gmail OAuth regression: complete setup via `/oauth/callback`, expire the stored access token in libSQL, trigger a real `gmail` tool call through `/api/chat/send`, and verify refresh goes through the mock `/oauth/refresh` proxy without forwarding `client_secret` |
+| `test_local_code_search.py` | Local code search service E2E: builds binary, starts service, creates test indexes, verifies `/search`, `/symbol-search`, `/health`, `/index/stats`, and `/index` endpoints return correct results |
+| `test_firecrawl_search.py` | Firecrawl WASM tool E2E: verifies web search (`mode=search`), Sourcegraph code search (`mode=sourcegraph`), context scraping (`mode=context`), and hybrid mode (`mode=hybrid`) combining local + Sourcegraph results. Skips if no Firecrawl instance available. |
 
 ## `helpers.py`
 

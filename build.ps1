@@ -1,12 +1,13 @@
 # IronClaw Search Services Build Script
-# Builds Local Code Search Service and Firecrawl Search Service,
-# then packages them alongside the main ironclaw binary so users
-# don't need to manually copy anything.
-# Usage: .\build.ps1 [--release] [--clean]
+# Builds the main ironclaw binary plus Local Code Search Service and
+# Firecrawl Search Service, then bundles them together so users don't
+# need to manually copy anything.
+# Usage: .\build.ps1 [--release] [--clean] [--skip-main]
 
 param(
     [switch]$release = $true,
-    [switch]$clean = $false
+    [switch]$clean = $false,
+    [switch]$skip_main = $false
 )
 
 $ErrorActionPreference = "Stop"
@@ -14,20 +15,25 @@ $ROOT = Split-Path -Parent $MyInvocation.MyCommand.Path
 $DIST = Join-Path $ROOT "dist"
 $PROFILE = if ($release) { "release" } else { "debug" }
 
-Write-Host "=== IronClaw Search Services Build ===" -ForegroundColor Cyan
+Write-Host "=== IronClaw Full Build ===" -ForegroundColor Cyan
 Write-Host "Profile: $PROFILE"
 Write-Host "Output: $DIST"
 Write-Host ""
 
-# Clean dist folder if requested
-if ($clean -and (Test-Path $DIST)) {
-    Write-Host "Cleaning $DIST..." -ForegroundColor Yellow
-    Remove-Item -Recurse -Force $DIST
-}
+# Build main ironclaw binary (unless skipped)
+if (-not $skip_main) {
+    Write-Host "Building main ironclaw binary..." -ForegroundColor Green
+    Set-Location $ROOT
+    if ($release) {
+        cargo build --release 2>&1 | Write-Host
+    } else {
+        cargo build 2>&1 | Write-Host
+    }
 
-# Create dist folder
-if (-not (Test-Path $DIST)) {
-    New-Item -ItemType Directory -Path $DIST | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "ERROR: Main ironclaw build failed!" -ForegroundColor Red
+        exit 1
+    }
 }
 
 # Build Local Code Search Service

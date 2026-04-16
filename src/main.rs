@@ -15,14 +15,15 @@ use ironclaw::{
         web::log_layer::LogBroadcaster,
     },
     cli::{
-        Cli, Command, run_mcp_command, run_pairing_command, run_service_command,
-        run_status_command, run_tool_command,
+        Cli, Command, run_mcp_command, run_pairing_command, run_search_command,
+        run_service_command, run_status_command, run_tool_command,
     },
     config::Config,
     hooks::bootstrap_hooks,
     llm::create_session_manager,
     orchestrator::{ReaperConfig, SandboxReaper},
     pairing::PairingStore,
+    search_manager::SearchServiceManager,
     tracing_fmt::{init_cli_tracing, init_worker_tracing},
     webhooks::{self, ToolWebhookState},
 };
@@ -127,6 +128,10 @@ async fn async_main() -> anyhow::Result<()> {
         Some(Command::Service(service_cmd)) => {
             init_cli_tracing();
             return run_service_command(service_cmd);
+        }
+        Some(Command::Search(search_cmd)) => {
+            init_cli_tracing();
+            return run_search_command(search_cmd).await;
         }
         Some(Command::Skills(skills_cmd)) => {
             init_cli_tracing();
@@ -1400,6 +1405,14 @@ async fn async_main() -> anyhow::Result<()> {
         });
     }
 
+    // ── Start Search Services ───────────────────────────────────────────
+
+    let search_manager = SearchServiceManager::new();
+    if let Err(e) = search_manager.start_all().await {
+        tracing::warn!("Failed to start search services: {}", e);
+        tracing::warn!("Search features will be unavailable. Run 'ironclaw onboard' to configure.");
+    }
+
     agent.run().await?;
 
     // ── Shutdown ────────────────────────────────────────────────────────
@@ -1436,6 +1449,9 @@ async fn async_main() -> anyhow::Result<()> {
             tracing::warn!("Failed to stop tunnel cleanly: {}", e);
         }
     }
+
+    // Stop search services
+    search_manager.stop_all().await;
 
     tracing::debug!("Agent shutdown complete");
 

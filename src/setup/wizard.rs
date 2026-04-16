@@ -441,14 +441,20 @@ impl SetupWizard {
             // Step 7: Extensions (tools)
             print_step(7, total_steps, "Extensions");
             self.step_extensions().await?;
+            self.persist_after_step().await;
 
-            // Step 8: Docker Sandbox
-            print_step(8, total_steps, "Docker Sandbox");
+            // Step 8: Web Search (Firecrawl)
+            print_step(8, total_steps, "Web Search");
+            self.step_firecrawl().await?;
+            self.persist_after_step().await;
+
+            // Step 9: Docker Sandbox
+            print_step(9, total_steps, "Docker Sandbox");
             self.step_docker_sandbox().await?;
             self.persist_after_step().await;
 
-            // Step 9: Heartbeat
-            print_step(9, total_steps, "Background Tasks");
+            // Step 10: Heartbeat
+            print_step(10, total_steps, "Background Tasks");
             self.step_heartbeat()?;
             self.persist_after_step().await;
 
@@ -1690,7 +1696,8 @@ impl SetupWizard {
         Ok(())
     }
 
-    /// Anthropic OAuth setup: extract token from `claude login` credentials.
+    /// Anthropic OAuth setup: extract token from `claude login` credentials,
+    /// or accept a manually pasted OAuth token.
     async fn setup_anthropic_oauth(&mut self) -> Result<(), SetupError> {
         self.set_llm_backend_preserving_model("anthropic");
 
@@ -1700,26 +1707,11 @@ impl SetupWizard {
             if confirm("Use this token?", true).map_err(SetupError::Io)? {
                 return self.save_anthropic_oauth_token(&token).await;
             }
-        } else {
-            print_info("No OAuth token found from `claude login`.");
-            print_info("Run `claude login` in a terminal to authenticate, then retry.");
-            println!();
-
-            if confirm("Retry after running `claude login`?", true).map_err(SetupError::Io)? {
-                // Block until the user has run `claude login` in another terminal
-                input("Press Enter after running `claude login` in another terminal...")
-                    .map_err(SetupError::Io)?;
-                if let Some(token) = crate::config::ClaudeCodeConfig::extract_oauth_token() {
-                    print_info(&format!("Found OAuth token: {}", mask_api_key(&token)));
-                    return self.save_anthropic_oauth_token(&token).await;
-                }
-                print_error("Still no OAuth token found.");
-            }
         }
 
         // Fallback: let user paste the token manually, or switch to API key
-        print_info("You can paste your OAuth token directly (starts with sk-ant-oat01-).");
-        print_info("Or press Enter with no input to switch to the API key flow.");
+        print_info("Paste your OAuth token below, or press Enter to switch to API key flow.");
+        print_info("(OAuth tokens from `claude login` are auto-detected; custom tokens can be pasted here.)");
         let token = secret_input("Anthropic OAuth token").map_err(SetupError::Io)?;
         let token_str = token.expose_secret();
         if token_str.is_empty() {
@@ -1740,11 +1732,15 @@ impl SetupWizard {
 
     /// Save an Anthropic OAuth token to secrets and set env for immediate use.
     async fn save_anthropic_oauth_token(&mut self, token: &str) -> Result<(), SetupError> {
-        // Validate token format to catch accidentally pasted API keys
+        // Validate that token is non-empty
+        if token.trim().is_empty() {
+            print_error("Token cannot be empty.");
+            return Err(SetupError::Config("Empty OAuth token".to_string()));
+        }
+
+        // Warn if token doesn't look like a standard OAuth token, but still accept it
         if !token.starts_with("sk-ant-oat") {
-            print_error("Token doesn't look like an OAuth token (expected prefix: sk-ant-oat).");
-            print_info("If you have an API key instead, use the 'Direct API Key' option.");
-            return Err(SetupError::Config("Invalid OAuth token format".to_string()));
+            print_info("Note: Token does not have the standard 'sk-ant-oat' prefix. This is OK for custom endpoints.");
         }
 
         // Store in secrets if available
@@ -2863,7 +2859,138 @@ impl SetupWizard {
         Ok(())
     }
 
-    /// Step 8: Docker Sandbox -- check Docker installation and availability.
+    /// Step 8: Web Search (Firecrawl) -- configure search provider and migrate from Brave.
+    async fn step_firecrawl(&mut self) -> Result<(), SetupError> {
+        print_info("Web Search is powered by Firecrawl, which provides clean markdown");
+        print_info("from web pages. It can be self-hosted for free or used via the cloud API.");
+        println!();
+
+        // Also offer to configure Local Code Search for fast codebase search
+        print_info("IronClaw can also index your local codebases for fast full-text search.");
+        print_info("This enables the 'hybrid' search mode that combines local + web results.");
+        println!();
+
+        let configure_local_search = confirm("Configure Local Code Search?", true).map_err(SetupError::Io)?;
+
+        if configure_local_search {
+            let config_path = ironclaw_base_dir().join("local-code-search.jsonc");
+            if config_path.exists() {
+                print_info("Local Code Search is already configured.");
+            } else {
+                print_info("Enter the path to a codebase you'd like to index:");
+                let default_path = std::env::current_dir()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or_else(|_| ".".into());
+                let index_path = input("Path to index", &default_path).map_err(SetupError::Io)?;
+
+                let config_content = format!(
+                    r#"{{
+  "service": {{
+    "port": 3004,
+    "bind_address": "127.0.0.1",
+    "watch_enabled": true
+  }},
+  "indexes": [
+    {{
+      "name": "{}",
+      "path": "{}",
+      "languages": ["all"],
+      "symbols_enabled": true,
+      "enabled": true
+    }}
+  ]
+}}"#,
+                    std::path::Path::new(&index_path)
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("codebase"),
+                    index_path.replace('\\', "\\\\"),
+                );
+
+                if let Err(e) = std::fs::write(&config_path, &config_content) {
+                    tracing::warn!("Failed to write local-code-search config: {}", e);
+                    print_info("Could not write config file. You can create it manually at:");
+                    println!("  {}", config_path.display());
+                } else {
+                    print_success("Local Code Search configured");
+                    print_info("The service will auto-start when you run 'ironclaw run'");
+                }
+            }
+        }
+
+        // Migrate deprecated Brave Search secrets
+        if let Ok(ctx) = self.init_secrets_context().await {
+            if ctx.secret_exists("brave_api_key").await {
+                print_info("Migrating: Removing deprecated brave_api_key secret (replaced by Firecrawl).");
+                let _ = ctx.delete_secret("brave_api_key").await;
+                print_success("Brave Search secret removed");
+            }
+        }
+
+        // Check if firecrawl_search tool is installed
+        let tools_dir = ironclaw_base_dir().join("tools");
+        let installed_tools = discover_installed_tools(&tools_dir).await;
+        let has_firecrawl = installed_tools.iter().any(|t| t.contains("firecrawl"));
+
+        if !has_firecrawl {
+            print_info("The firecrawl_search tool is not installed.");
+            print_info("You can install it later from the extension registry:");
+            print_info("  ironclaw registry install firecrawl_search");
+            return Ok(());
+        }
+
+        print_info("Configure your Firecrawl instance for web search:");
+        println!();
+
+        let options = [
+            "Use local Firecrawl instance (http://localhost:3002) - Free, no API key",
+            "Use cloud Firecrawl API (firecrawl.dev) - Requires API key",
+            "Skip - configure later via FIRECRAWL_API_URL env var",
+        ];
+
+        let choice = select_one("How would you like to use Firecrawl?", &options)
+            .map_err(SetupError::Io)?;
+
+        match choice {
+            0 => {
+                // Local instance
+                let local_url = "http://localhost:3002";
+                crate::config::inject_single_var("FIRECRAWL_API_URL", local_url);
+                print_success("Firecrawl configured for local instance at http://localhost:3002");
+                print_info("Make sure your Firecrawl API is running:");
+                print_info("  cd externals/firecrawl/apps/api && pnpm run start");
+            }
+            1 => {
+                // Cloud API
+                print_info("Get your Firecrawl API key from: https://firecrawl.dev");
+                println!();
+
+                let key = secret_input("Firecrawl API key").map_err(SetupError::Io)?;
+                let key_str = key.expose_secret();
+
+                if !key_str.is_empty() {
+                    crate::config::inject_single_var("FIRECRAWL_API_KEY", key_str);
+                    if let Ok(ctx) = self.init_secrets_context().await {
+                        let key = SecretString::from(key_str.to_string());
+                        if let Err(e) = ctx.save_secret("firecrawl_api_key", &key).await {
+                            tracing::warn!("Failed to save Firecrawl API key: {}", e);
+                        }
+                    }
+                    print_success("Firecrawl cloud API configured");
+                } else {
+                    print_info("No API key provided. Set FIRECRAWL_API_KEY in your environment.");
+                }
+            }
+            2 => {
+                print_info("Skipped. Set FIRECRAWL_API_URL in your environment later.");
+            }
+            _ => unreachable!(),
+        }
+
+        Ok(())
+    }
+
+    /// Step 9: Docker Sandbox -- check Docker installation and availability.
     async fn step_docker_sandbox(&mut self) -> Result<(), SetupError> {
         print_info("IronClaw can execute code, run builds, and use tools inside Docker");
         print_info("containers. This keeps your system safe -- commands from the LLM run");

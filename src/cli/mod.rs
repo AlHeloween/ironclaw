@@ -30,6 +30,7 @@ mod models;
 mod pairing;
 mod registry;
 mod routines;
+mod search;
 mod service;
 mod skills;
 pub mod status;
@@ -51,6 +52,7 @@ pub use models::{ModelsCommand, run_models_command};
 pub use pairing::{PairingCommand, run_pairing_command, run_pairing_command_with_store};
 pub use registry::{RegistryCommand, run_registry_command};
 pub use routines::{RoutinesCommand, run_routines_command};
+pub use search::{SearchCommand, run_search_command};
 pub use service::{ServiceCommand, run_service_command};
 pub use skills::{SkillsCommand, run_skills_command};
 pub use status::run_status_command;
@@ -211,6 +213,14 @@ pub enum Command {
         long_about = "Install, start, or stop service.\nExample: ironclaw service install"
     )]
     Service(ServiceCommand),
+
+    /// Manage search services (local code search, Firecrawl)
+    #[command(
+        subcommand,
+        about = "Manage search services",
+        long_about = "Start, stop, and check health of search services.\nExamples:\n  ironclaw search start\n  ironclaw search status\n  ironclaw search index /path/to/code"
+    )]
+    Search(SearchCommand),
 
     /// Manage SKILL.md-based skills
     #[command(

@@ -149,6 +149,26 @@ pub async fn run_doctor_command() -> anyhow::Result<()> {
         &mut skipped,
     );
 
+    // ── Search Services ──────────────────────────────────────
+
+    section_header("Search Services");
+
+    check(
+        "Local Code Search",
+        check_local_code_search_service().await,
+        &mut passed,
+        &mut failed,
+        &mut skipped,
+    );
+
+    check(
+        "Firecrawl Search",
+        check_firecrawl_search_service().await,
+        &mut passed,
+        &mut failed,
+        &mut skipped,
+    );
+
     // ── External ─────────────────────────────────────────────
 
     section_header("External");
@@ -694,6 +714,50 @@ fn check_binary(name: &str, args: &[&str]) -> CheckResult {
             }
         }
         Err(_) => CheckResult::Skip(format!("{name} not found in PATH")),
+    }
+}
+
+// ── Local Code Search service ───────────────────────────────
+
+async fn check_local_code_search_service() -> CheckResult {
+    let config_path = ironclaw_base_dir().join("local-code-search.jsonc");
+    if !config_path.exists() {
+        return CheckResult::Skip("not configured (no ~/.ironclaw/local-code-search.jsonc)".into());
+    }
+
+    let url = "http://127.0.0.1:3004/health";
+    match reqwest::get(url).await {
+        Ok(resp) if resp.status().is_success() => {
+            CheckResult::Pass("running on port 3004".into())
+        }
+        Ok(resp) => {
+            CheckResult::Fail(format!("responding with HTTP {}", resp.status()))
+        }
+        Err(e) => {
+            CheckResult::Fail(format!("not responding on port 3004: {}", e))
+        }
+    }
+}
+
+// ── Firecrawl Search service ────────────────────────────────
+
+async fn check_firecrawl_search_service() -> CheckResult {
+    let config_path = ironclaw_base_dir().join("firecrawl-search.jsonc");
+    if !config_path.exists() {
+        return CheckResult::Skip("not configured (no ~/.ironclaw/firecrawl-search.jsonc)".into());
+    }
+
+    let url = "http://127.0.0.1:3005/health";
+    match reqwest::get(url).await {
+        Ok(resp) if resp.status().is_success() => {
+            CheckResult::Pass("running on port 3005".into())
+        }
+        Ok(resp) => {
+            CheckResult::Fail(format!("responding with HTTP {}", resp.status()))
+        }
+        Err(e) => {
+            CheckResult::Fail(format!("not responding on port 3005: {}", e))
+        }
     }
 }
 

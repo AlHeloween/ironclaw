@@ -47,7 +47,7 @@ This document tracks feature parity between IronClaw (Rust implementation) and O
 | Bonjour/mDNS discovery | ✅ | ❌ | |
 | Tailscale integration | ✅ | ❌ | |
 | Health check endpoints | ✅ | ✅ | /api/health + /api/gateway/status + /healthz + /readyz, with channel-backed readiness probes |
-| `doctor` diagnostics | ✅ | 🚧 | 16 checks: settings, LLM, DB, embeddings, routines, gateway, MCP, skills, secrets, service, Docker daemon, tunnel binaries |
+| `doctor` diagnostics | ✅ | ✅ | 18 checks: settings, LLM, DB, embeddings, routines, gateway, MCP, skills, secrets, service, search services (2), Docker daemon, tunnel binaries |
 | Agent event broadcast | ✅ | 🚧 | SSE broadcast manager exists (SseManager) but tool/job-state events not fully wired |
 | Channel health monitor | ✅ | ❌ | Auto-restart with configurable interval |
 | Presence system | ✅ | ❌ | Beacons on connect, system presence for agents |
@@ -364,6 +364,21 @@ This document tracks feature parity between IronClaw (Rust implementation) and O
 | Identity files (AGENTS.md, etc.) | ✅ | ✅ | |
 | Daily logs | ✅ | ✅ | |
 | Heartbeat checklist | ✅ | ✅ | HEARTBEAT.md |
+
+### Owner: _Unassigned_
+
+---
+
+## 10.5. Search Services
+
+| Feature | OpenClaw | IronClaw | Notes |
+|---------|----------|----------|-------|
+| Local code search service | ❌ | ✅ | Native Rust binary with tantivy BM25 + symbol extraction |
+| Firecrawl web search service | ❌ | ✅ | Native Rust binary for web search, URL scraping, Sourcegraph |
+| Hybrid search mode (local + Sourcegraph) | ❌ | ✅ | Combines local code search with public code search |
+| Auto-start from `ironclaw run` | ❌ | ✅ | SearchServiceManager spawns services on agent startup |
+| `ironclaw search` CLI | ❌ | ✅ | start/stop/status/indexes/index subcommands |
+| Health checks in `doctor` | ❌ | ✅ | Port 3004 (local) and 3005 (firecrawl) health probes |
 
 ### Owner: _Unassigned_
 

@@ -98,8 +98,9 @@ Step 4: Model Selection
 Step 5: Embeddings
 Step 6: Channel Configuration
 Step 7: Extensions (tools)
-Step 8: Docker Sandbox
-Step 9: Background Tasks (heartbeat)
+Step 8: Web Search (Firecrawl + Local Code Search)
+Step 9: Docker Sandbox
+Step 10: Background Tasks (heartbeat)
        ↓
    save_and_summarize()
 ```

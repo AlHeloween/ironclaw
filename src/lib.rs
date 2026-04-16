@@ -70,6 +70,7 @@ pub mod profile;
 pub mod registry;
 pub mod safety;
 pub mod sandbox;
+pub mod search_manager;
 pub mod secrets;
 pub mod service;
 pub mod settings;

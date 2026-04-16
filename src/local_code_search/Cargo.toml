@@ -7,8 +7,6 @@ description = "Local code search service for IronClaw"
 authors = ["NEAR AI <support@near.ai>"]
 license = "MIT OR Apache-2.0"
 
-[workspace]
-
 [dependencies]
 # Async runtime
 tokio = { version = "1", features = ["full"] }

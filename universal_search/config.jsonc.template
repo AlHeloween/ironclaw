@@ -1,0 +1,59 @@
+{
+  // Service configuration
+  "service": {
+    "port": 3005,
+    "bind_address": "127.0.0.1"
+  },
+
+  // Local code search (tantivy-based full-text + symbol search)
+  "local_search": {
+    "enabled": true,
+    "port": 3004,
+    "watch_enabled": true,
+    "watch_debounce_ms": 500,
+    "indexes_dir": "./indexes",
+    "indexes": [
+      {
+        "name": "my-project",
+        "path": "../../path/to/my/project",
+        "languages": ["all"],
+        "symbols_enabled": true,
+        "enabled": true
+      }
+    ]
+  },
+
+  // Web search (Firecrawl API + Sourcegraph)
+  "web_search": {
+    "firecrawl": {
+      "api_url": "http://localhost:3002",
+      "api_key": null,
+      "source": "local",
+      "auto_start": true,
+      "repo_path": "./firecrawl",
+      "commit": null,
+      "postgres": {
+        "host": "localhost",
+        "port": 5432,
+        "username": "postgres",
+        "password": null,
+        "database": "firecrawl"
+      },
+      "redis": {
+        "host": "localhost",
+        "port": 6379,
+        "password": null
+      }
+    },
+    "sourcegraph": {
+      "api_url": "https://sourcegraph.com/.api/graphql",
+      "access_token": null
+    }
+  },
+
+  // Bootstrap configuration
+  "bootstrap": {
+    "auto_clone_firecrawl": true,
+    "auto_install_deps": true
+  }
+}

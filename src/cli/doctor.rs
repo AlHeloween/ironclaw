@@ -154,16 +154,16 @@ pub async fn run_doctor_command() -> anyhow::Result<()> {
     section_header("Search Services");
 
     check(
-        "Local Code Search",
-        check_local_code_search_service().await,
+        "Universal Search (Local)",
+        check_universal_search_local().await,
         &mut passed,
         &mut failed,
         &mut skipped,
     );
 
     check(
-        "Firecrawl Search",
-        check_firecrawl_search_service().await,
+        "Universal Search (Web)",
+        check_universal_search_web().await,
         &mut passed,
         &mut failed,
         &mut skipped,
@@ -717,12 +717,12 @@ fn check_binary(name: &str, args: &[&str]) -> CheckResult {
     }
 }
 
-// ── Local Code Search service ───────────────────────────────
+// ── Universal Search service ───────────────────────────────
 
-async fn check_local_code_search_service() -> CheckResult {
-    let config_path = ironclaw_base_dir().join("local-code-search.jsonc");
+async fn check_universal_search_local() -> CheckResult {
+    let config_path = ironclaw_base_dir().join("universal-search.jsonc");
     if !config_path.exists() {
-        return CheckResult::Skip("not configured (no ~/.ironclaw/local-code-search.jsonc)".into());
+        return CheckResult::Skip("not configured (no ~/.ironclaw/universal-search.jsonc)".into());
     }
 
     let url = "http://127.0.0.1:3004/health";
@@ -739,12 +739,10 @@ async fn check_local_code_search_service() -> CheckResult {
     }
 }
 
-// ── Firecrawl Search service ────────────────────────────────
-
-async fn check_firecrawl_search_service() -> CheckResult {
-    let config_path = ironclaw_base_dir().join("firecrawl-search.jsonc");
+async fn check_universal_search_web() -> CheckResult {
+    let config_path = ironclaw_base_dir().join("universal-search.jsonc");
     if !config_path.exists() {
-        return CheckResult::Skip("not configured (no ~/.ironclaw/firecrawl-search.jsonc)".into());
+        return CheckResult::Skip("not configured (no ~/.ironclaw/universal-search.jsonc)".into());
     }
 
     let url = "http://127.0.0.1:3005/health";

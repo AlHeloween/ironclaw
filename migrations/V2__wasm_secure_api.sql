@@ -93,7 +93,7 @@ CREATE TABLE tool_capabilities (
     allowed_secrets TEXT[] NOT NULL DEFAULT '{}',
 
     -- Tool invocation aliases (indirection layer)
-    -- Maps alias name to real tool name, e.g., {"search": "brave_search"}
+    -- Maps alias name to real tool name, e.g., {"search": "web_search"}
     tool_aliases JSONB NOT NULL DEFAULT '{}',
 
     -- Rate limiting

@@ -1,0 +1,50 @@
+{
+  "service": {
+    "port": 3005,
+    "bind_address": "127.0.0.1"
+  },
+  "firecrawl": {
+    "api_url": "http://localhost:3002",
+    "api_key": null,
+    "source": "local",
+    "auto_start": true,
+    "auto_install": true,
+    "manage_lifecycle": true,
+    "repo_path": "externals/firecrawl",
+    "postgres": {
+      "host": "localhost",
+      "port": 5432,
+      "username": "firecrawl",
+      "password": "",
+      "database": "firecrawl"
+    },
+    "redis": {
+      "host": "localhost",
+      "port": 6379,
+      "password": ""
+    },
+    "playwright": {
+      "url": "http://localhost:3000/scrape",
+      "auto_start": true,
+      "browsers": [
+        "chromium"
+      ]
+    },
+    "node_path": "node",
+    "pnpm_path": "pnpm"
+  },
+  "llm": {
+    "provider": "anthropic",
+    "api_key": null,
+    "model": "claude-opus-4-20260518",
+    "base_url": "https://api.anthropic.com"
+  },
+  "sourcegraph": {
+    "api_url": "https://sourcegraph.com/.api/graphql",
+    "access_token": null
+  },
+  "local_search": {
+    "url": "http://127.0.0.1:3004",
+    "enabled": true
+  }
+}

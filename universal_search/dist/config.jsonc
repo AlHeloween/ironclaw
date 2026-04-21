@@ -1,0 +1,123 @@
+// Universal Search Service Configuration for IronClaw
+// ====================================================
+//
+// Unified configuration for:
+// - Web search via Firecrawl API
+// - URL scraping/context extraction
+// - Code search via Sourcegraph public API
+// - Hybrid mode combining Sourcegraph + web search
+//
+// Config file location: <exe_dir>/config.jsonc or ~/.ironclaw/universal-search.jsonc
+
+{
+  // Service configuration
+  "service": {
+    // Port the main service listens on (default: 3005)
+    "port": 3005,
+
+    // Bind address (default: 127.0.0.1)
+    "bind_address": "127.0.0.1"
+  },
+
+  // Agent configuration (Claude-powered autonomous research)
+  "agent": {
+    // Enable agent endpoint
+    "enabled": true,
+
+    // Maximum agent loop iterations per request
+    "max_turns": 5,
+
+    // Claude model to use
+    "model": "claude-sonnet-4-20250514",
+
+    // System prompt (default provided if null)
+    "system_prompt": null,
+
+    // Minimum seconds between agent requests (rate limiting)
+    "rate_limit_seconds": 10,
+
+    // Maximum concurrent agent jobs
+    "max_concurrent": 10,
+
+    // Job TTL in seconds (auto-cleanup)
+    "job_ttl_seconds": 3600,
+
+    // Max input tokens (safety limit, below Claude's 256K limit)
+    "max_input_tokens": 200000,
+
+    // Max output tokens
+    "max_output_tokens": 100000,
+
+    // Retry attempts for Claude API failures
+    "retry_max_attempts": 5,
+
+    // Delay between retries in seconds
+    "retry_delay_seconds": 10,
+
+    // Anthropic API key for agent (StreamLake Claude proxy)
+    "anthropic_api_key": "jKNqCmxsX_-0Gw2BAtv_x8cUTkH90ztrQW6bLT3svnc",
+
+    // Anthropic base URL for agent (StreamLake Claude proxy)
+    "anthropic_base_url": "https://vanchin.streamlake.ai/api/gateway/coding/ep-4na9u3-1776415346266966985/claude-code-proxy/v1"
+  },
+
+  // Web search (Firecrawl API + Sourcegraph)
+  "web_search": {
+    // Firecrawl API configuration
+    "firecrawl": {
+      // Firecrawl API URL
+      // For local self-hosted instance: http://localhost:3002
+      // For cloud API: https://api.firecrawl.dev
+      "api_url": "http://localhost:3002",
+
+      // Firecrawl API key (only needed for cloud API)
+      "api_key": null,
+
+      // Source: "local" | "cloud" | "none"
+      "source": "local",
+
+      // Auto-start Firecrawl server if not running
+      "auto_start": false,
+
+      // Path to Firecrawl repo (relative to exe dir)
+      "repo_path": "../../universal_search/firecrawl",
+
+      // Specific commit to checkout (null for latest)
+      "commit": null,
+
+      // PostgreSQL configuration for Firecrawl server
+      "postgres": {
+        "host": "localhost",
+        "port": 5432,
+        "username": "postgres",
+        "password": "1412",
+        "database": "firecrawl"
+      },
+
+      // Redis configuration for Firecrawl server
+      "redis": {
+        "host": "localhost",
+        "port": 6379,
+        "password": null
+      }
+    },
+
+    // Sourcegraph configuration (for code search)
+    "sourcegraph": {
+      // Sourcegraph public API endpoint
+      "api_url": "https://sourcegraph.com/.api/graphql",
+
+      // Sourcegraph access token (optional, for higher rate limits)
+      "access_token": null
+    }
+  },
+
+  // Bootstrap configuration
+  "bootstrap": {
+    // Auto-clone Firecrawl repo if missing
+    "auto_clone_firecrawl": false,
+
+    // Auto-install Firecrawl dependencies (pnpm install)
+    "auto_install_deps": false
+  }
+}

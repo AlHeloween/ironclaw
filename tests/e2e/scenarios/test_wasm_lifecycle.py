@@ -242,7 +242,7 @@ async def test_configure_rejects_unknown_secret(ironclaw_server, web_search_inst
 
 
 async def test_configure_with_valid_secret(web_search_configured):
-    """Configure with valid brave_api_key succeeds and auto-activates."""
+    """Configure with valid API key succeeds and auto-activates."""
     assert web_search_configured["configure"].get("activated") is True
 
 

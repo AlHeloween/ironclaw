@@ -93,3 +93,13 @@ Start with these deeper docs as needed:
 - Run the most targeted tests/checks that cover the change.
 - Re-check security-sensitive paths when touching auth, secrets, network listeners, sandboxing, or approvals.
 - Keep the final diff scoped to the task.
+
+## Build and Tooling
+
+- Use `cmd_runner` for interactive builds (`pwsh build.ps1`) and unknown executables. This provides ConPTY-based terminal sessions with logging and control.
+- Set `CC=clang` via `.cargo/config.toml` for C compilation on Windows (libsql-ffi requires a C compiler).
+
+## External Services and Containers
+
+- Docker use and external cloud API use are strictly forbidden except when explicitly allowed by the user.
+- All services must run locally by default. External API calls require explicit user opt-in via configuration.

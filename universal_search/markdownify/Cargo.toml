@@ -1,0 +1,25 @@
+[package]
+name = "opencode-markdownify"
+version = "0.1.0"
+edition = "2021"
+description = "Universal document to markdown converter for opencode"
+license = "MIT"
+
+[[bin]]
+name = "opencode-markdownify"
+path = "src/main.rs"
+
+[dependencies]
+pdf_oxide = "0.3.32"
+feed-rs = { version = "2.3.1", default-features = false }
+kamadak-exif = "0.6.1"
+html2md = "0.2.15"
+markdownify = "0.3.2"
+sevenz-rust = "0.6.1"
+thiserror = "2.0.11"
+atty = "0.2"
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true

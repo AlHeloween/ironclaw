@@ -16,10 +16,10 @@
   // Service configuration
   "service": {
     // Port the service listens on (default: 3005)
-    // "port": 3005,
+    "port": 3005,
 
     // Bind address (default: 127.0.0.1)
-    // "bind_address": "127.0.0.1"
+    "bind_address": "127.0.0.1"
   },
 
   // Firecrawl API configuration
@@ -27,30 +27,108 @@
     // Firecrawl API URL
     // For local self-hosted instance: http://localhost:3002
     // For cloud API: https://api.firecrawl.dev
-    // "api_url": "http://localhost:3002",
+    "api_url": "http://localhost:3002",
 
     // Firecrawl API key (only needed for cloud API)
     // Get your key from: https://firecrawl.dev
-    // "api_key": ""
+    "api_key": "",
+
+    // Source of Firecrawl: "local" | "cloud" | "none"
+    "source": "local",
+
+    // Auto-start Firecrawl server if not running
+    "auto_start": true,
+
+    // Auto-install Firecrawl dependencies if missing
+    "auto_install": true,
+
+    // Manage Firecrawl server lifecycle (start/stop/monitor)
+    "manage_lifecycle": true,
+
+    // Path to Firecrawl repo (relative to project root)
+    "repo_path": "externals/firecrawl",
+
+    // PostgreSQL configuration for Firecrawl server
+    "postgres": {
+      // PostgreSQL host
+      "host": "localhost",
+
+      // PostgreSQL port
+      "port": 5432,
+
+      // PostgreSQL username
+      "username": "firecrawl",
+
+      // PostgreSQL password
+      "password": "1412",
+
+      // PostgreSQL database name
+      "database": "firecrawl"
+    },
+
+    // Redis configuration for Firecrawl server
+    "redis": {
+      // Redis host
+      "host": "localhost",
+
+      // Redis port
+      "port": 6379,
+
+      // Redis password (if any)
+      "password": ""
+    },
+
+    // Playwright service configuration
+    "playwright": {
+      // Playwright microservice URL
+      "url": "http://localhost:3000/scrape",
+
+      // Auto-start Playwright service
+      "auto_start": true,
+
+      // Browsers to install (chromium, firefox, webkit)
+      "browsers": ["chromium"]
+    },
+
+    // Path to Node.js binary
+    "node_path": "node",
+
+    // Path to pnpm binary
+    "pnpm_path": "pnpm"
+  },
+
+  // LLM configuration (for AI-powered features)
+  "llm": {
+    // LLM provider: "anthropic" | "openai" | "ollama"
+    "provider": "anthropic",
+
+    // API key for the LLM provider
+    "api_key": "",
+
+    // Model name
+    "model": "claude-opus-4-20260518",
+
+    // Base URL for the API
+    "base_url": "https://api.anthropic.com"
   },
 
   // Sourcegraph configuration (for code search)
   "sourcegraph": {
     // Sourcegraph public API endpoint (default: sourcegraph.com)
-    // "api_url": "https://sourcegraph.com/.api/graphql",
+    "api_url": "https://sourcegraph.com/.api/graphql",
 
     // Sourcegraph access token (optional, for higher rate limits)
     // Create a token at: https://sourcegraph.com/user/settings/tokens
-    // "access_token": ""
+    "access_token": ""
   },
 
   // Local code search service configuration (for hybrid mode)
   "local_search": {
     // URL of the local code search service
     // This service indexes your local codebases for fast offline search
-    // "url": "http://127.0.0.1:3004",
+    "url": "http://127.0.0.1:3004",
 
     // Enable/disable local search in hybrid mode
-    // "enabled": true
+    "enabled": true
   }
 }

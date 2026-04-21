@@ -373,12 +373,13 @@ This document tracks feature parity between IronClaw (Rust implementation) and O
 
 | Feature | OpenClaw | IronClaw | Notes |
 |---------|----------|----------|-------|
-| Local code search service | ❌ | ✅ | Native Rust binary with tantivy BM25 + symbol extraction |
-| Firecrawl web search service | ❌ | ✅ | Native Rust binary for web search, URL scraping, Sourcegraph |
+| Universal Search Service | ❌ | ✅ | Single binary: local tantivy BM25 + web Firecrawl + Sourcegraph hybrid |
+| Local code search (tantivy FTS + symbols) | ❌ | ✅ | Rust/TS/JS/Python symbol extraction, circular 10KB log buffer |
+| Web search (Firecrawl local or cloud) | ❌ | ✅ | Auto-bootstrap: clone Firecrawl, check PostgreSQL/Redis, auto-start |
 | Hybrid search mode (local + Sourcegraph) | ❌ | ✅ | Combines local code search with public code search |
-| Auto-start from `ironclaw run` | ❌ | ✅ | SearchServiceManager spawns services on agent startup |
+| Auto-start from `ironclaw run` | ❌ | ✅ | SearchServiceManager spawns universal-search-service on agent startup |
 | `ironclaw search` CLI | ❌ | ✅ | start/stop/status/indexes/index subcommands |
-| Health checks in `doctor` | ❌ | ✅ | Port 3004 (local) and 3005 (firecrawl) health probes |
+| Health checks in `doctor` | ❌ | ✅ | Port 3004 (local) and 3005 (web) health probes |
 
 ### Owner: _Unassigned_
 
@@ -572,7 +573,8 @@ This document tracks feature parity between IronClaw (Rust implementation) and O
 - ✅ Tinfoil private inference provider
 - ✅ OpenAI-compatible / OpenRouter provider support
 - ✅ Local code search service (tantivy FTS + symbol extraction for Rust/TS/JS/Python)
-- ✅ Firecrawl search service (web search, URL scraping, Sourcegraph, hybrid mode)
+- ✅ Web search service (Firecrawl local/cloud + Sourcegraph + hybrid mode)
+- ✅ Universal Search Service (unified binary replacing separate services)
 
 ### P1 - High Priority
 

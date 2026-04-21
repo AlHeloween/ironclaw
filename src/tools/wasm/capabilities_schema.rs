@@ -1474,13 +1474,13 @@ mod tests {
     #[test]
     fn test_parse_description() {
         let json = r#"{
-            "description": "Search the web using Brave Search API"
+            "description": "Search the web using an external API"
         }"#;
 
         let caps = CapabilitiesFile::from_json(json).unwrap();
         assert_eq!(
             caps.description.as_deref(),
-            Some("Search the web using Brave Search API")
+            Some("Search the web using an external API")
         );
     }
 

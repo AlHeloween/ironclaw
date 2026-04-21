@@ -1,0 +1,17 @@
+2026-04-20 19:35:26 [33mwarn[39m [:]: Authentication is disabled. Supabase client will not be initialized. {}
+2026-04-20 19:35:27 [33mwarn[39m [:]: AUTUMN_SECRET_KEY is not set - add AUTUMN_SECRET_KEY to enable Autumn {}
+2026-04-20 19:35:28 [33mwarn[39m [:]: Index supabase client will not be initialized. {}
+2026-04-20 19:35:28 [33mwarn[39m [:]: Authentication is disabled. Supabase ledger client will not be initialized. {}
+2026-04-20 19:35:29 [32minfo[39m [:]: Number of CPUs: 8 available 
+2026-04-20 19:35:29 [32minfo[39m [:]: Network info dump 
+2026-04-20 19:35:29 [32minfo[39m [:]: Worker 14764 started 
+2026-04-20 19:35:29 [32minfo[39m [:]: Attaching WebSocket proxy to Express app 
+2026-04-20 19:35:29 [32minfo[39m [:]: WebSocket proxy successfully attached to Express app 
+2026-04-20 19:35:29 [32minfo[39m [:]: Worker 14764 listening on port 3002 
+2026-04-20 19:35:29 [32minfo[39m [:]: Connected to Redis Session Rate Limit Store! 
+2026-04-20 19:35:29 [32minfo[39m [:]: Redis connected 
+2026-04-20 19:52:24 [32minfo[39m [:]: SIGTERM signal received: closing HTTP server 
+2026-04-20 19:52:24 [32minfo[39m [:]: Server closed. 
+2026-04-20 19:52:24 [32minfo[39m [webhook-queue:]: Webhook RabbitMQ closed 
+2026-04-20 19:52:24 [32minfo[39m [indexer-queue:]: Indexer RabbitMQ closed 
+2026-04-20 19:52:24 [32minfo[39m [:]: NUQ shutdown complete 

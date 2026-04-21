@@ -1,13 +1,13 @@
 //! Search service management commands.
 //!
-//! Provides subcommands for managing Local Code Search and Firecrawl Search services.
+//! Provides subcommands for managing the Universal Search Service.
 
 use clap::Subcommand;
 
 #[derive(Subcommand, Debug)]
 pub enum SearchCommand {
     /// Start all configured search services
-    #[command(about = "Start search services", long_about = "Starts Local Code Search and Firecrawl Search services if configured.\nExample: ironclaw search start")]
+    #[command(about = "Start search services", long_about = "Starts the Universal Search Service if configured.\nExample: ironclaw search start")]
     Start,
 
     /// Stop all search services
@@ -71,12 +71,14 @@ pub async fn run_search_command(cmd: &SearchCommand) -> anyhow::Result<()> {
 
         SearchCommand::Status { json } => {
             let local_ok = check_service_health(3004).await;
-            let firecrawl_ok = check_service_health(3005).await;
+            let web_ok = check_service_health(3005).await;
 
             if *json {
                 let status = serde_json::json!({
-                    "local_code_search": if local_ok { "healthy" } else { "unhealthy" },
-                    "firecrawl_search": if firecrawl_ok { "healthy" } else { "unhealthy" },
+                    "universal_search": {
+                        "local_search": if local_ok { "healthy" } else { "unhealthy" },
+                        "web_search": if web_ok { "healthy" } else { "unhealthy" },
+                    }
                 });
                 println!("{}", serde_json::to_string_pretty(&status).unwrap());
             } else {
@@ -85,31 +87,32 @@ pub async fn run_search_command(cmd: &SearchCommand) -> anyhow::Result<()> {
                 } else {
                     format!("{}unhealthy{}", fmt::error(), fmt::reset())
                 };
-                let fc_status = if firecrawl_ok {
+                let web_status = if web_ok {
                     format!("{}healthy{}", fmt::success(), fmt::reset())
                 } else {
                     format!("{}unhealthy{}", fmt::error(), fmt::reset())
                 };
-                println!("Local Code Search (port 3004): {}", local_status);
-                println!("Firecrawl Search (port 3005):  {}", fc_status);
+                println!("Universal Search - Local (port 3004): {}", local_status);
+                println!("Universal Search - Web (port 3005):   {}", web_status);
             }
         }
 
         SearchCommand::Indexes { json } => {
-            let config_path = ironclaw_base_dir().join("local-code-search.jsonc");
+            let config_path = ironclaw_base_dir().join("universal-search.jsonc");
             if !config_path.exists() {
                 if *json {
-                    println!("{}", serde_json::json!({"error": "Local Code Search not configured"}));
+                    println!("{}", serde_json::json!({"error": "Universal Search not configured"}));
                 } else {
-                    println!("{}Local Code Search not configured{}", fmt::warning(), fmt::reset());
-                    println!("Create ~/.ironclaw/local-code-search.jsonc to configure indexes.");
+                    println!("{}Universal Search not configured{}", fmt::warning(), fmt::reset());
+                    println!("Create ~/.ironclaw/universal-search.jsonc to configure indexes.");
                 }
                 return Ok(());
             }
 
             let content = std::fs::read_to_string(&config_path)?;
             let config: serde_json::Value = serde_json::from_str(&content)?;
-            let indexes = config.get("indexes").and_then(|v| v.as_array());
+            let local_search = config.get("local_search");
+            let indexes = local_search.and_then(|v| v.get("indexes")).and_then(|v| v.as_array());
 
             if let Some(indexes) = indexes {
                 if *json {
@@ -138,7 +141,7 @@ pub async fn run_search_command(cmd: &SearchCommand) -> anyhow::Result<()> {
         SearchCommand::Index { path, name, languages } => {
             let local_ok = check_service_health(3004).await;
             if !local_ok {
-                println!("{}Local Code Search service is not running{}", fmt::error(), fmt::reset());
+                println!("{}Universal Search local service is not running{}", fmt::error(), fmt::reset());
                 println!("Run 'ironclaw search start' first.");
                 return Ok(());
             }
@@ -152,7 +155,7 @@ pub async fn run_search_command(cmd: &SearchCommand) -> anyhow::Result<()> {
             });
 
             let url = format!(
-                "http://127.0.0.1:3004/index/{}/index",
+                "http://127.0.0.1:3005/local/index/{}/index",
                 urlencoding::encode(&index_name)
             );
 

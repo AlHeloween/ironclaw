@@ -2871,7 +2871,7 @@ impl SetupWizard {
         Ok(())
     }
 
-    /// Step 8: Web Search (Firecrawl) -- configure search provider and migrate from Brave.
+    /// Step 8: Web Search (Firecrawl) -- configure search provider.
     async fn step_firecrawl(&mut self) -> Result<(), SetupError> {
         print_info("Web Search is powered by Firecrawl, which provides clean markdown");
         print_info("from web pages. It can be self-hosted for free or used via the cloud API.");
@@ -2930,14 +2930,7 @@ impl SetupWizard {
             }
         }
 
-        // Migrate deprecated Brave Search secrets
-        if let Ok(ctx) = self.init_secrets_context().await {
-            if ctx.secret_exists("brave_api_key").await {
-                print_info("Migrating: Removing deprecated brave_api_key secret (replaced by Firecrawl).");
-                let _ = ctx.delete_secret("brave_api_key").await;
-                print_success("Brave Search secret removed");
-            }
-        }
+
 
         // Check if firecrawl_search tool is installed
         let tools_dir = ironclaw_base_dir().join("tools");

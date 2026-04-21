@@ -44,3 +44,5 @@ engine_trace_*.json
 
 # External dependencies (searxng, etc.)
 /externals/
+
+logs/

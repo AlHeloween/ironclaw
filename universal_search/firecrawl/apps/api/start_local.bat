@@ -1,0 +1,15 @@
+@echo off
+set USE_GO_MARKDOWN_PARSER=false
+set SKIP_DOCKER_SERVICES=true
+set NUQ_RABBITMQ_URL=
+set NODE_NO_WARNINGS=1
+set PORT=3002
+set HOST=0.0.0.0
+set NUQ_DATABASE_URL=postgresql://postgres:1412@localhost:5432/nuq
+set NUQ_DATABASE_URL_LISTEN=postgresql://postgres:1412@localhost:5432/nuq
+set REDIS_URL=redis://localhost:6379
+set USE_DB_AUTHENTICATION=false
+set BULL_AUTH_KEY=test
+set ANTHROPIC_API_KEY=jKNqCmxsX_-0Gw2BAtv_x8cUTkH90ztrQW6bLT3svnc
+set ANTHROPIC_BASE_URL=https://vanchin.streamlake.ai/api/gateway/coding/ep-4na9u3-1776415346266966985/claude-code-proxy/v1
+node dist/src/index.js

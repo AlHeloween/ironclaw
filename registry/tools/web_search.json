@@ -4,7 +4,7 @@
   "kind": "tool",
   "version": "1.0.0",
   "wit_version": "0.3.0",
-  "description": "Search the web and scrape content using Firecrawl. Supports two modes: 'search' for web search with full-page markdown, and 'context' for scraping a specific URL for RAG grounding. Replaces the legacy Brave Search integration.",
+  "description": "Search the web and scrape content using Firecrawl. Supports two modes: 'search' for web search with full-page markdown, and 'context' for scraping a specific URL for RAG grounding.",
   "keywords": [
     "search",
     "web",

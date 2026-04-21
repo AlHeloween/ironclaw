@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Replace Brave Search API with Firecrawl for web search and RAG grounding. The `web_search` tool now uses Firecrawl with two modes: `search` (web search) and `context` (URL scraping). The `llm_context` tool is deprecated and aliased to `web_search` with `mode=context`. No API key required for self-hosted instances.
+- Replace legacy web search API with Firecrawl for web search and RAG grounding. The `web_search` tool now uses Firecrawl with two modes: `search` (web search) and `context` (URL scraping). The `llm_context` tool is deprecated and aliased to `web_search` with `mode=context`. No API key required for self-hosted instances.
 
 - Add Sourcegraph integration to `firecrawl_search` tool via `mode: "sourcegraph"`. Search public codebases like Facebook React, Vue, TensorFlow, etc. directly from the agent. Uses Sourcegraph's public GraphQL API with optional access token (`SOURCEGRAPH_ACCESS_TOKEN`) for higher rate limits.
 
@@ -541,7 +541,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- add Brave Web Search WASM tool ([#474](https://github.com/nearai/ironclaw/pull/474))
+- add Web Search WASM tool ([#474](https://github.com/nearai/ironclaw/pull/474))
 
 ### Fixed
 

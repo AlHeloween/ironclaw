@@ -9176,6 +9176,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "universal-search-dist"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "dirs 5.0.1",
+ "flate2",
+ "hex",
+ "nix 0.29.0",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "serde_jsonc",
+ "sha2",
+ "tar",
+ "toml 0.8.23",
+ "tracing",
+ "tracing-subscriber",
+ "winapi",
+ "zip",
+]
+
+[[package]]
 name = "universal-search-service"
 version = "0.1.0"
 dependencies = [

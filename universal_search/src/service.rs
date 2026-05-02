@@ -120,7 +120,7 @@ struct AgentStatus {
 #[derive(Debug, Clone)]
 pub enum AgentJobStatus {
     Pending,
-    Processing { current_turn: u32, last_tool: Option<String> },
+    Processing { current_turn: u32, last_tool: Option<String>, last_reasoning: Option<String> },
     Completed(AgentResponse),
     Failed(String),
     Cancelled,
@@ -360,11 +360,12 @@ async fn agent_status_handler(
                 "success": true,
                 "status": "processing"
             })),
-            AgentJobStatus::Processing { current_turn, last_tool } => HttpResponse::Ok().json(serde_json::json!({
+            AgentJobStatus::Processing { current_turn, last_tool, last_reasoning } => HttpResponse::Ok().json(serde_json::json!({
                 "success": true,
                 "status": "processing",
                 "current_turn": current_turn,
-                "last_tool": last_tool
+                "last_tool": last_tool,
+                "last_reasoning": last_reasoning
             })),
             AgentJobStatus::Completed(response) => HttpResponse::Ok().json(serde_json::json!({
                 "success": true,
@@ -440,6 +441,7 @@ async fn run_agent_loop(state: &SharedState, job_id: &str, request: AgentRequest
                 job.status = AgentJobStatus::Processing {
                     current_turn: turn,
                     last_tool: None,
+                    last_reasoning: None,
                 };
             }
         }
@@ -489,6 +491,17 @@ async fn run_agent_loop(state: &SharedState, job_id: &str, request: AgentRequest
         }
 
         if has_tool_use {
+            let mut assistant_content: Vec<serde_json::Value> = Vec::new();
+
+            for text_block in &text_blocks {
+                assistant_content.push(text_block.clone());
+            }
+            for block in &tool_blocks {
+                assistant_content.push((*block).clone());
+            }
+
+            let mut tool_results: Vec<serde_json::Value> = Vec::new();
+
             for block in &tool_blocks {
                 let tool_name = block.get("name").and_then(|n| n.as_str()).unwrap_or("");
                 let input = block.get("input").cloned().unwrap_or(serde_json::json!({}));
@@ -500,6 +513,7 @@ async fn run_agent_loop(state: &SharedState, job_id: &str, request: AgentRequest
                         job.status = AgentJobStatus::Processing {
                             current_turn: turn,
                             last_tool: Some(tool_name.to_string()),
+                            last_reasoning: if !turn_text.is_empty() { Some(turn_text.clone()) } else { None },
                         };
                     }
                 }
@@ -513,28 +527,22 @@ async fn run_agent_loop(state: &SharedState, job_id: &str, request: AgentRequest
                     output: output.clone(),
                 });
 
-                if !text_blocks.is_empty() {
-                    messages.push(serde_json::json!({
-                        "role": "assistant",
-                        "content": text_blocks
-                    }));
-                    text_blocks.clear();
-                }
-
-                messages.push(serde_json::json!({
-                    "role": "assistant",
-                    "content": [(*block).clone()]
-                }));
-
-                messages.push(serde_json::json!({
-                    "role": "user",
-                    "content": [{
-                        "type": "tool_result",
-                        "tool_use_id": tool_id,
-                        "content": output.to_string()
-                    }]
+                tool_results.push(serde_json::json!({
+                    "type": "tool_result",
+                    "tool_use_id": tool_id,
+                    "content": output.to_string()
                 }));
             }
+
+            messages.push(serde_json::json!({
+                "role": "assistant",
+                "content": assistant_content
+            }));
+
+            messages.push(serde_json::json!({
+                "role": "user",
+                "content": tool_results
+            }));
 
             if turn == max_turns && !accumulated_text.is_empty() {
                 let answer = accumulated_text.trim().to_string();

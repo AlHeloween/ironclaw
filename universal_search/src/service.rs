@@ -428,6 +428,8 @@ async fn run_agent_loop(state: &SharedState, job_id: &str, request: AgentRequest
 
     let tools = get_tool_definitions();
 
+    let mut accumulated_text = String::new();
+
     for turn in 1..=max_turns {
         {
             let mut jobs = state.agent_jobs.write().unwrap();
@@ -459,13 +461,35 @@ async fn run_agent_loop(state: &SharedState, job_id: &str, request: AgentRequest
             .map(|a| a.to_vec())
             .unwrap_or_default();
 
-        let mut has_tool_use = false;
-        let mut final_answer = None;
+        let mut text_blocks: Vec<serde_json::Value> = Vec::new();
+        let mut turn_text = String::new();
 
         for block in &content_blocks {
             let block_type = block.get("type").and_then(|t| t.as_str());
-            if block_type == Some("tool_use") {
-                has_tool_use = true;
+            if block_type == Some("text") {
+                if let Some(text) = block.get("text").and_then(|t| t.as_str()) {
+                    if !turn_text.is_empty() {
+                        turn_text.push('\n');
+                    }
+                    turn_text.push_str(text);
+                    text_blocks.push(block.clone());
+                }
+            }
+        }
+
+        let tool_blocks: Vec<&serde_json::Value> = content_blocks.iter()
+            .filter(|b| b.get("type").and_then(|t| t.as_str()) == Some("tool_use"))
+            .collect();
+
+        let has_tool_use = !tool_blocks.is_empty();
+
+        if !turn_text.is_empty() {
+            accumulated_text.push_str(&turn_text);
+            accumulated_text.push('\n');
+        }
+
+        if has_tool_use {
+            for block in &tool_blocks {
                 let tool_name = block.get("name").and_then(|n| n.as_str()).unwrap_or("");
                 let input = block.get("input").cloned().unwrap_or(serde_json::json!({}));
                 let tool_id = block.get("id").and_then(|i| i.as_str()).unwrap_or("");
@@ -489,9 +513,17 @@ async fn run_agent_loop(state: &SharedState, job_id: &str, request: AgentRequest
                     output: output.clone(),
                 });
 
+                if !text_blocks.is_empty() {
+                    messages.push(serde_json::json!({
+                        "role": "assistant",
+                        "content": text_blocks
+                    }));
+                    text_blocks.clear();
+                }
+
                 messages.push(serde_json::json!({
                     "role": "assistant",
-                    "content": content_blocks
+                    "content": [(*block).clone()]
                 }));
 
                 messages.push(serde_json::json!({
@@ -502,15 +534,35 @@ async fn run_agent_loop(state: &SharedState, job_id: &str, request: AgentRequest
                         "content": output.to_string()
                     }]
                 }));
-            } else if block_type == Some("text") {
-                if let Some(text) = block.get("text").and_then(|t| t.as_str()) {
-                    final_answer = Some(text.to_string());
-                }
             }
-        }
 
-        if !has_tool_use {
-            let answer = final_answer.unwrap_or_else(|| "No response from Claude.".to_string());
+            if turn == max_turns && !accumulated_text.is_empty() {
+                let answer = accumulated_text.trim().to_string();
+                tool_calls.push(ToolCall {
+                    turn,
+                    tool: None,
+                    input: serde_json::json!(null),
+                    output: serde_json::json!({"answer": &answer}),
+                });
+                let resp = AgentResponse {
+                    query: request.query.clone(),
+                    answer,
+                    turns: turn,
+                    tool_calls,
+                    model: model.to_string(),
+                };
+                let mut jobs = state.agent_jobs.write().unwrap();
+                if let Some(job) = jobs.get_mut(job_id) {
+                    job.status = AgentJobStatus::Completed(resp);
+                }
+                return;
+            }
+        } else {
+            let answer = if turn_text.is_empty() {
+                "No response from Claude.".to_string()
+            } else {
+                turn_text
+            };
 
             tool_calls.push(ToolCall {
                 turn,
@@ -519,7 +571,7 @@ async fn run_agent_loop(state: &SharedState, job_id: &str, request: AgentRequest
                 output: serde_json::json!({"answer": &answer}),
             });
 
-            let response = AgentResponse {
+            let resp = AgentResponse {
                 query: request.query.clone(),
                 answer,
                 turns: turn,
@@ -529,16 +581,20 @@ async fn run_agent_loop(state: &SharedState, job_id: &str, request: AgentRequest
 
             let mut jobs = state.agent_jobs.write().unwrap();
             if let Some(job) = jobs.get_mut(job_id) {
-                job.status = AgentJobStatus::Completed(response);
+                job.status = AgentJobStatus::Completed(resp);
             }
             return;
         }
     }
 
-    let partial_answer = "Reached maximum turns without a conclusive answer.";
+    let partial_answer = if accumulated_text.is_empty() {
+        "Reached maximum turns without a conclusive answer.".to_string()
+    } else {
+        accumulated_text.trim().to_string()
+    };
     let response = AgentResponse {
         query: request.query.clone(),
-        answer: partial_answer.to_string(),
+        answer: partial_answer,
         turns: max_turns,
         tool_calls,
         model: model.to_string(),

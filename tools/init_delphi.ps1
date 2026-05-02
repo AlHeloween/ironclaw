@@ -10,13 +10,21 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$rsvars = @'
-D:\USESoft\RAD_Pascal\bin\rsvars.bat
-'@.Trim()
-$rsvars64 = @'
-D:\USESoft\RAD_Pascal\bin64\rsvars64.bat
-'@.Trim()
-$bat = if ($Platform -in @('Win64','Linux64')) { $rsvars64 } else { $rsvars }
+
+# Dynamic Delphi root discovery via where.exe
+$dcc = Get-Command dcc64 -ErrorAction SilentlyContinue
+if (-not $dcc) { $dcc = Get-Command dcc32 -ErrorAction SilentlyContinue }
+if ($dcc) {
+  $delphiRoot = Split-Path (Split-Path $dcc.Source -Parent) -Parent
+} else {
+  $delphiRoot = "D:\USESoft\RAD_Pascal"
+}
+
+$rsvars = Join-Path $delphiRoot 'bin\rsvars.bat'
+$rsvars64 = Join-Path $delphiRoot 'bin64\rsvars64.bat'
+$bat = if ($Platform -in @('Win64','Linux64')) {
+  if (Test-Path $rsvars64) { $rsvars64 } else { $rsvars }
+} else { $rsvars }
 if (-not (Test-Path -LiteralPath $bat)) {
   Write-Error "rsvars script not found: $bat"
 }
@@ -34,7 +42,7 @@ foreach ($line in $envBlock) {
 
 Write-Host "[OK] Delphi environment initialized for $Platform."
 Write-Host "default_platform=Win64"
-Write-Host "detected_root=D:\USESoft\RAD_Pascal"
+Write-Host "detected_root=$delphiRoot"
 Write-Host "Example: .\\tools\\build_delphi_msbuild.ps1 -Dpr delphi\\ADIDInstallerFMX.dpr -Platform $Platform -Config Release"
 Write-Host "Linux note: FMX only; typically also pass -Profile (Remote Profile name)."
 Write-Host ("dcc32=" + [bool](Get-Command dcc32 -ErrorAction SilentlyContinue))

@@ -12,12 +12,42 @@ rem   Use:  . .\tools\init_delphi.ps1 -Platform Win64
 set "DEFAULT_PLATFORM=Win64"
 set "PLATFORM=%~1"
 if not defined PLATFORM set "PLATFORM=%DEFAULT_PLATFORM%"
+
+rem --- Dynamic Delphi root discovery via where.exe ---
+set "DELPHI_ROOT="
+for /f "delims=" %%F in ('where dcc64 2^>nul') do (
+  if not defined DELPHI_ROOT (
+    for %%D in ("%%~dpF..") do set "DELPHI_ROOT=%%~fD"
+  )
+)
+if not defined DELPHI_ROOT (
+  for /f "delims=" %%F in ('where dcc32 2^>nul') do (
+    if not defined DELPHI_ROOT (
+      for %%D in ("%%~dpF..") do set "DELPHI_ROOT=%%~fD"
+    )
+  )
+)
+if not defined DELPHI_ROOT (
+  set "DELPHI_ROOT=D:\USESoft\RAD_Pascal"
+)
+
+set "RSVARS=%DELPHI_ROOT%\bin\rsvars.bat"
+set "RSVARS64=%DELPHI_ROOT%\bin64\rsvars64.bat"
+
 if /I "%PLATFORM%"=="Win64" (
-  call "D:\USESoft\RAD_Pascal\bin64\rsvars64.bat"
+  if exist "%RSVARS64%" (
+    call "%RSVARS64%"
+  ) else (
+    call "%RSVARS%"
+  )
 ) else if /I "%PLATFORM%"=="Linux64" (
-  call "D:\USESoft\RAD_Pascal\bin64\rsvars64.bat"
+  if exist "%RSVARS64%" (
+    call "%RSVARS64%"
+  ) else (
+    call "%RSVARS%"
+  )
 ) else (
-  call "D:\USESoft\RAD_Pascal\bin\rsvars.bat"
+  call "%RSVARS%"
 )
 if errorlevel 1 (
   echo [ERROR] rsvars.bat failed.
@@ -31,7 +61,7 @@ if errorlevel 1 (
 )
 echo [OK] Delphi environment initialized.
 echo [INFO] default_platform=Win64
-echo [INFO] detected_root=D:\USESoft\RAD_Pascal
+echo [INFO] detected_root=%DELPHI_ROOT%
 echo.
 echo Examples:
 echo   tools\build_delphi_msbuild.cmd delphi\ADIDInstallerFMX.dpr Win32 Release

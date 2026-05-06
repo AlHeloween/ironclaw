@@ -13,7 +13,7 @@ if errorlevel 1 (
 
 REM Get the absolute path of this script's directory
 set SCRIPT_DIR=%~dp0
-set SERVICE_DIR=%SCRIPT_DIR%dist
+set SERVICE_DIR=%SCRIPT_DIR%\dist\
 set SERVICE_BIN=%SERVICE_DIR%universal-search-service.exe
 
 if not exist "%SERVICE_BIN%" (

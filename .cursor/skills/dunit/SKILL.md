@@ -31,7 +31,7 @@ Provide a reliable workflow for building and running Delphi DUnit tests (console
 ## Project layout (this repo)
 
 - Test project: `delphi\tests\ADIDInstallerTests.dpr`
-- Test units: `delphi\tests\TestInstallerCore.pas`, `delphi\tests\TestEmbeddedAssets.pas`
+- Test units: `delphi\tests\TestInstallerCore.pas`, `delphi\tests\TestInstallerOps.pas`
 
 ## How to add a new test
 

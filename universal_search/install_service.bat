@@ -13,22 +13,19 @@ if errorlevel 1 (
 
 REM Get the absolute path of this script's directory
 set SCRIPT_DIR=%~dp0
-set SERVICE_DIR=%SCRIPT_DIR%\dist\
-set SERVICE_BIN=%SERVICE_DIR%universal-search-service.exe
+set SERVICE_BIN=%SCRIPT_DIR%universal-search-service.exe
 
 if not exist "%SERVICE_BIN%" (
     echo ERROR: universal-search-service.exe not found at %SERVICE_BIN%
-    echo Please build and copy the binary to dist/
-    echo   cargo build --release -p universal-search-service
-    echo   copy target\release\universal-search-service.exe dist\
-    echo   copy config.jsonc dist\
+    echo Please build first:
+    echo   pwsh -File build.ps1
     pause
     exit /b 1
 )
 
-if not exist "%SERVICE_DIR%config.jsonc" (
-    echo ERROR: config.jsonc not found at %SERVICE_DIR%config.jsonc
-    echo Please copy config.jsonc to the dist/ directory.
+if not exist "%SCRIPT_DIR%config.jsonc" (
+    echo ERROR: config.jsonc not found at %SCRIPT_DIR%config.jsonc
+    echo Please ensure config.jsonc is in the same directory as this script.
     pause
     exit /b 1
 )
@@ -39,12 +36,12 @@ nssm remove universal-search confirm 2>nul
 
 echo Installing Universal Search Service...
 echo   Binary: %SERVICE_BIN%
-echo   Config: %SERVICE_DIR%config.jsonc
+echo   Config: %SCRIPT_DIR%config.jsonc
 echo   Port: 3005
 echo.
 
 nssm install universal-search "%SERVICE_BIN%" run
-nssm set universal-search AppDirectory "%SERVICE_DIR%"
+nssm set universal-search AppDirectory "%SCRIPT_DIR%"
 nssm set universal-search Start SERVICE_AUTO_START
 nssm set universal-search AppRestartDelay 5000
 nssm set universal-search AppExit Default Restart

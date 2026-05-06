@@ -38,9 +38,7 @@ nssm set Firecrawl AppEnvironmentExtra ^
     "NUQ_DATABASE_URL_LISTEN=postgresql://postgres:1412@localhost:5432/nuq" ^
     "REDIS_URL=redis://localhost:6379" ^
     "USE_DB_AUTHENTICATION=false" ^
-    "BULL_AUTH_KEY=test" ^
-    "ANTHROPIC_API_KEY=jKNqCmxsX_-0Gw2BAtv_x8cUTkH90ztrQW6bLT3svnc" ^
-    "ANTHROPIC_BASE_URL=https://vanchin.streamlake.ai/api/gateway/coding/ep-4na9u3-1776415346266966985/claude-code-proxy/v1"
+    "BULL_AUTH_KEY=test"
 
 echo.
 echo Starting Firecrawl...

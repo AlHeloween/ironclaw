@@ -2,8 +2,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SERVICE_DIR="$SCRIPT_DIR/dist"
-SERVICE_BIN="$SERVICE_DIR/universal-search-service"
+SERVICE_BIN="$SCRIPT_DIR/universal-search-service"
 
 echo "============================================"
 echo "  Installing Universal Search Service (Linux)"
@@ -12,14 +11,13 @@ echo
 
 if [ ! -f "$SERVICE_BIN" ]; then
     echo "ERROR: universal-search-service not found at $SERVICE_BIN"
-    echo "Please build: cargo build --release -p universal-search-service"
-    echo "Then copy: cp target/release/universal-search-service $SERVICE_DIR/"
+    echo "Please build first: ./build.sh"
     exit 1
 fi
 
-if [ ! -f "$SERVICE_DIR/config.jsonc" ]; then
-    echo "ERROR: config.jsonc not found at $SERVICE_DIR/config.jsonc"
-    echo "Please copy config.jsonc to the dist/ directory."
+if [ ! -f "$SCRIPT_DIR/config.jsonc" ]; then
+    echo "ERROR: config.jsonc not found at $SCRIPT_DIR/config.jsonc"
+    echo "Please ensure config.jsonc is in the same directory as this script."
     exit 1
 fi
 
@@ -29,7 +27,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 $SUDO cp "$SERVICE_BIN" /usr/local/bin/universal-search-service
-$SUDO cp "$SERVICE_DIR/config.jsonc" /etc/universal-search.jsonc
+$SUDO cp "$SCRIPT_DIR/config.jsonc" /etc/universal-search.jsonc
 
 cat > /tmp/universal-search.service << 'EOF'
 [Unit]

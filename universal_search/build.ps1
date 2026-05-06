@@ -30,6 +30,10 @@ if (-not (Test-Path $ExePath)) {
 
 Write-Host "Build successful: $ExePath"
 
+# Copy binary to universal_search directory (alongside config.jsonc)
+Copy-Item $ExePath -Destination "universal_search/universal-search-service.exe" -Force
+Write-Host "Binary copied to: universal_search/universal-search-service.exe"
+
 # Create distribution folder
 $DistDir = "dist/universal-search"
 if (Test-Path $DistDir) { Remove-Item -Recurse -Force $DistDir }

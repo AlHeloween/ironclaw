@@ -24,6 +24,10 @@ fi
 
 echo "Build successful: $EXE_PATH"
 
+# Copy binary to universal_search directory (alongside config.jsonc)
+cp "$EXE_PATH" "universal_search/universal-search-service" 2>/dev/null || cp "$EXE_PATH" "$SCRIPT_DIR/universal-search-service"
+echo "Binary copied to: universal_search/universal-search-service"
+
 # Create distribution folder
 DIST_DIR="dist/universal-search"
 rm -rf "$DIST_DIR"

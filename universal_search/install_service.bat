@@ -47,7 +47,7 @@ nssm set universal-search AppRestartDelay 5000
 nssm set universal-search AppExit Default Restart
 nssm set universal-search AppStdout -
 nssm set universal-search AppStderr -
-nssm set universal-search Priority SERVICE_NORMAL
+nssm set universal-search AppPriority BELOW_NORMAL_PRIORITY_CLASS
 
 echo.
 echo Starting Universal Search Service...

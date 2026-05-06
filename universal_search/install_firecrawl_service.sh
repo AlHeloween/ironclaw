@@ -49,7 +49,7 @@ WorkingDirectory=/opt/firecrawl/apps/api
 ExecStart=/usr/bin/node dist/src/index.js
 Restart=on-failure
 RestartSec=5
-Nice=10
+Nice=19
 IOSchedulingClass=idle
 CPUSchedulingPolicy=idle
 Environment="USE_GO_MARKDOWN_PARSER=false"

@@ -25,7 +25,7 @@ nssm set Firecrawl AppRestartDelay 5000
 nssm set Firecrawl AppExit Default Restart
 nssm set Firecrawl AppStdout -
 nssm set Firecrawl AppStderr -
-nssm set Firecrawl Priority SERVICE_NORMAL
+nssm set Firecrawl AppPriority BELOW_NORMAL_PRIORITY_CLASS
 
 nssm set Firecrawl AppEnvironmentExtra ^
     "USE_GO_MARKDOWN_PARSER=false" ^

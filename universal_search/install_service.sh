@@ -41,7 +41,7 @@ ExecStart=/usr/local/bin/universal-search-service run
 WorkingDirectory=/usr/local/bin
 Restart=on-failure
 RestartSec=5
-Nice=10
+Nice=19
 IOSchedulingClass=idle
 CPUSchedulingPolicy=idle
 Environment="RUST_LOG=info"

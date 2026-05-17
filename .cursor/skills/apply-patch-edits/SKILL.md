@@ -23,12 +23,12 @@ cross-conflicts and ambiguous provenance.
 3. After editing canonical assets, sync receivers so installs and tooling stay consistent:
 
 ~~~bash
-uv run scripts/build_artefacts.py
-uv run scripts/sync_agent_assets.py
+python scripts/build_artefacts.py
+python scripts/sync_agent_assets.py
 ~~~
 
 If you changed only canonical skills and want a faster sync of receiver skill folders:
 
 ~~~bash
-uv run scripts/sync_skills_from_artefacts.py --prune
+python scripts/sync_skills_from_artefacts.py --prune
 ~~~

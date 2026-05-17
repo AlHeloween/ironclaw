@@ -43,9 +43,9 @@ alwaysApply: true
   - Example: `powershell -NoProfile -c 'cmd /c "where dcc64"'`
   - Reason: In some environments, `cmd /c <command>` can succeed but produce no captured output.
 
-- **Windows permission quirks (uv cache / pytest temp):**
-  - If `uv run ...` fails with `Access is denied` under the default UV cache (user profile), set `UV_CACHE_DIR` to a repo-local folder (example: `.uv_cache/`) and retry.
-  - If pytest temp cleanup fails with `PermissionError` on `--basetemp`, prefer placing basetemp under the repo (example: `uv run pytest -q --basetemp .temp/pytest`).
+- **Windows permission quirks (Python cache / test temp):**
+  - If Python package or cache access fails with `Access is denied` under a user-profile cache, configure the active package manager or tool to use a repo-local cache/temp folder and retry.
+  - If pytest temp cleanup fails with `PermissionError` on `--basetemp`, prefer placing basetemp under the repo (example: `python -m pytest -q --basetemp .temp/pytest`).
   - If a temp folder becomes unreadable, reclaim and delete it via `takeown` + `icacls` + `rd /s /q` (hardware-grounded filesystem ops; do not "pretend" tests ran).
   - Recommended start-of-work (Windows):
     - cmd.exe: `call scripts\\dev_env_windows.cmd`
@@ -54,14 +54,14 @@ alwaysApply: true
 - **Canonical agent assets**: Treat `artefacts/rules/` and `artefacts/skills/` as the source of truth. Agent folders (`.cursor/`, `.codex/`, `~/.codex/`, `.opencode/`) are receivers and may be deleted/recreated.
 
 - **Rebuild/install agent scaffolds**: After changing canonical rules/skills run:
-  - `uv run scripts/build_artefacts.py`
-  - `uv run scripts/sync_agent_assets.py`
+  - `python scripts/build_artefacts.py`
+  - `python scripts/sync_agent_assets.py`
 
-- **When making declarative updates, running verification, or using rollback/templates**, use the **adm-exe** skill: **prefer `tools/adm.exe` (Windows) or `tools/adm` (Unix)** when the project has adm installed there—it is a stable copy; tool modifications or errors in source will not break the toolchain. Otherwise use `uv run adm` in a repo that has adm as a dependency.
+- **When making declarative updates, running verification, or using rollback/templates**, use the **adm-exe** skill: **prefer `tools/adm.exe` (Windows) or `tools/adm` (Unix)** when the project has adm installed there—it is a stable copy; tool modifications or errors in source will not break the toolchain. Otherwise use `python -m adm` in a repo that has adm as a dependency.
 
 - **Preferred workflow:** Create template (`--template/--tpl <replace|insert|refactor-replace-function|pattern-rule|binary-hex-replace|create|overwrite|delete|binary-overwrite> [output_dir]` - Generate a timestamped XML descriptor template under `./updates/`, rename template as `updates/[ISO8601]_[short_semantic_dominant].xml`, edit, then apply (`--apply`). To **replay history** (inspect descriptors in order): run `tools/adm --replay-updates` (or `tools/adm --replay-updates updates --until 20260202T120000 --limit 5`). Add `--unified-diff` for exact hunks; use `--execute --workdir DIR --confirm-execute APPLY_IN_WORKDIR_ONLY` only when you intentionally want to apply inside an isolated copy. Do not write XML descriptors from scratch. Multiple backups per file are by design and an advantage (rollback, traceability; project stays manageable). run `adm --verify-all` on selected roots (e.g. `src tests adid_tests`) for a clean report. Do not restore from git over local work; use `adm --rollback` and descriptor rollbacks instead. 
 
-- **Patch-tool wrapper (apply_patch format):** When you need apply_patch-style edits but still want ADID backups/ledgers, use `tools/adm.exe --patch-tool <patch_file>` (or `uv run adm --patch-tool <patch_file>` in a repo checkout).
+- **Patch-tool wrapper (apply_patch format):** When you need apply_patch-style edits but still want ADID backups/ledgers, use `tools/adm.exe --patch-tool <patch_file>` (or `python -m adm --patch-tool <patch_file>` in a repo checkout).
 
 - **cmd_runner via adm (integration):** You may invoke cmd_runner through adm when you want it in the same progress-log cycle: `tools/adm.exe --cmd-runner start -- <command ...>` (Windows-only). Prefer this over ad-hoc wrappers so logs are centralized.
 
@@ -94,7 +94,9 @@ alwaysApply: true
 
 ## Project Structure:
 
-- `./pyproject.toml`: Project file, which includes all dependencies; initialized via `uv sync` at start of session. `./README.md` - readme file which describes project. `./AGENTS.md`: Operational Rules for Agents. `./src/project_name/__init__.py`: Application|Server initialization sequence. `./src/project_name/__main__.py`: Application|Server run sequence. `./src/project_name/libs/`: Standard universal libraries. `./src/project_name/DB/`: Databases `./src/project_name/gui/`: Core Graphical user interface with gui related files. `./src/project_name/clients/`: Data end users (with gui and logic). place documentation in /docs folder, 
+- Identify the project manifest(s) for the current repository before assuming tooling or layout. Common roots include `pyproject.toml`, `Cargo.toml`, `package.json`, `tsconfig.json`, `project.dpr`, `package.dpk`, `*.sln`, `CMakeLists.txt`, `Makefile`, or language-specific equivalents.
+- Read project-local governance and entrypoint documents when present: `README.md`, `AGENTS.md`, `docs/`, `index.md`, `DOCINDEX.md`, release/build scripts, and test configuration.
+- Derive source, test, GUI, database, client, and library folders from the actual repository layout. Do not assume a Python `src/project_name` structure in Rust, TypeScript, Delphi, C/C++, or mixed-language projects.
 
 ## Project Planning (track progress)
 

@@ -40,7 +40,7 @@ if not exist "!DPROJ!" (
   if /I "%PLATFORM%"=="Linux64" set "GEN_PLATFORMS=Win32;Win64;Linux64"
   if /I "%PLATFORM%"=="OSX64" set "GEN_PLATFORMS=Win32;Win64;OSX64"
   if /I "%PLATFORM%"=="OSXARM64" set "GEN_PLATFORMS=Win32;Win64;OSX64;OSXARM64"
-  uv run scripts\generate_delphi_dproj.py --dpr "%DPR%" --platforms "%GEN_PLATFORMS%"
+  python scripts\internal\generate_delphi_dproj.py --dpr "%DPR%" --platforms "%GEN_PLATFORMS%"
   if errorlevel 1 exit /b !errorlevel!
 )
 

@@ -14,7 +14,7 @@ Use this skill when a command may be:
 
 **Use cmd_runner for:**
 - Long-running builds: `cargo build --release`, `msbuild`, `make`, `gradle build`
-- Package installs: `npm install`, `pip install -r requirements.txt`, `uv sync`
+- Package installs: `npm install`, `python -m pip install -r requirements.txt`, `cargo fetch`, ecosystem-specific dependency setup
 - Test suites: `pytest`, `cargo test`, `npm test`, `mvn test`
 - Interactive TUIs: `htop`, `ncurses` apps, installers with prompts
 - Crash-prone or unstable commands
@@ -57,7 +57,7 @@ All subprocesses created by cmd_runner open with `SW_SHOWMINNOACTIVE`:
 - Repo/dev:
   - `.\cmd_runner.exe ...` (Delphi binary at repo root)
 - Release bundle:
-  - `cmd_runner.exe ...` (preferred; no `uv` required)
+  - `cmd_runner.exe ...` (preferred; no project package manager required)
 - Via adm (integration; keeps a single progress-log cycle):
   - `tools/adm.exe --cmd-runner <cmd_runner args...>`
   - Example: `tools/adm.exe --cmd-runner start -- <command ...>`
@@ -94,6 +94,25 @@ All subprocesses created by cmd_runner open with `SW_SHOWMINNOACTIVE`:
   - `.\cmd_runner.exe send <run_id> --keys "ctrl+c,ctrl+d,ENTER"`
   - `.\cmd_runner.exe send <run_id> --hex 03` (raw byte: Ctrl+C)
   - `.\cmd_runner.exe send <run_id> --text "whoami" --crlf` (text + CRLF)
+  - `.\cmd_runner.exe send <run_id> --text "whoami" --text-as-b64 --crlf` (b64-encode text before sending; original stored as `text_b64` in inbox + in.log)
+  - `.\cmd_runner.exe send <run_id> --stdin-file FILEPATH` (send file content)
+  - `.\cmd_runner.exe send <run_id> --text-file FILEPATH` (send file content as one message)
+  - **PowerShell quoting:** use single quotes for bash/python. The double-quote (`"`) triggers PowerShell cmdline escaping on Windows — replace it with `'` (single-quote) or `~` (for cmd.exe):
+    ```powershell
+    cmd_runner send <id> --crlf -- "python3 -c 'print(1+2)'"          # PS " outer, bash ' inner
+    cmd_runner send <id> --crlf -- 'bash -c '\''echo $HOME'\'''        # PS ' outer, bash ' inner (escaped)
+    cmd_runner send <id> --crlf -- 'echo ~~~hello~~~'                  # ~ instead of " for cmd.exe
+    ```
+    When `"` is unavoidable, use `--text-file` (reads file bytes, bypasses PS cmdline entirely).
+  - **Multi-line commands** via PowerShell here-string (uses `--` separator, newlines preserved):
+    ```powershell
+    cmd_runner send <id> --crlf -- @'
+    echo FIRST
+    echo SECOND
+    echo THIRD
+    '@
+    ```
+    All sends are atomic by default.
   - `--keys` tokens: `LEFT`, `RIGHT`, `UP`, `DOWN`, `HOME`, `END`, `INSERT`, `DELETE`, `TAB`, `ESC`, `ENTER`, `BACKSPACE`, `ctrl+a`..`ctrl+z`, `ctrl+[`, `ctrl+\`, `TEXT:<text>`, `CHAR:<char>`, `HEX:<hex>`.
   - Auto-tails last 3 lines after send (default; use `--send-tail 0` to disable).
 

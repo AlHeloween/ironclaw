@@ -11,7 +11,7 @@ Use this skill when performing declarative file updates, verification, rollback,
 
 **Always use adm commands to get templates and fill them.** Do not hand-craft `updates/*.xml` or invent `<update_md5_*>`, `<content_md5_*>`, or mode syntax from memory.
 
-1. **First:** Run `tools/adm --help` (or `tools/adm.exe --help` on Windows; or `uv run adm --help` when tools/adm not present) to see all commands.
+1. **First:** Run `tools/adm --help` (or `tools/adm.exe --help` on Windows; or `python -m adm --help` when tools/adm not present) to see all commands.
 2. **To add a new update:** Create template (`tools/adm.exe --template/--tpl <NAME> [output_dir]` - Generate a timestamped XML descriptor template under `./updates/` by default (use `[TIMESTAMP]_[short_semantic_dominant].xml`; legacy `_update_scaffold.xml` is deprecated). Templates: `all`, `replace`, `overwrite`, `create`, `insert`, `delete`, `pattern-rule`, `binary-overwrite`, `binary-hex-replace`, `refactor-replace-function`), edit the generated descriptor in `updates/` (prefer using the agent `apply_patch` tool for XML edits), then apply (`--apply`). To **replay history** (inspect descriptors in chronological order; information-only by default): use `--replay-updates [dir] [--until TIMESTAMP] [--limit N]` (add `--unified-diff` for exact hunks; add `--execute --workdir DIR --confirm-execute APPLY_IN_WORKDIR_ONLY` to apply only inside an isolated copy). Do not write XML descriptors from scratch. Multiple backups per file are by design and an advantage (rollback, traceability; project stays manageable).
 3. **Never** write a new descriptor XML from scratch; you will get tags, MD5, or modes wrong. Use the template, then edit.
 
@@ -21,10 +21,10 @@ ADID workflow and communication rules are in `docs/ADID_Framework_15_3.md`. Pref
 
 ## How to invoke
 
-**Use `tools/adm` (or `tools/adm.exe` on Windows) when the project has it; otherwise `uv run adm`.**
+**Use `tools/adm` (or `tools/adm.exe` on Windows) when the project has it; otherwise `python -m adm`.**
 
 - **Primary:** `tools/adm` (Unix) or `tools/adm.exe` (Windows) when the project has adm installed there (e.g. after `--install-adid-rules`). That executable is stable; if you edit the tool with adm and there is an error, you cannot run adm anymore and the toolchain breaks—the copy in `tools/` avoids that.
-- **Fallback:** `uv run adm` with the same subcommands when tools/adm is not present (e.g. in the adm repo before install).
+- **Fallback:** `python -m adm` with the same subcommands when tools/adm is not present (e.g. in the adm repo before install).
 
 **Rule:** Use `tools/adm` when present—same as AGENTS.md; avoids misunderstanding and toolchain break when editing the tool with adm.
 
@@ -32,7 +32,7 @@ ADID workflow and communication rules are in `docs/ADID_Framework_15_3.md`. Pref
 
 ## Commands and when to use them
 
-Invoke as: `tools/adm <command>` (or `tools/adm.exe <command>` on Windows; or `uv run adm <command>` when tools/adm not present).
+Invoke as: `tools/adm <command>` (or `tools/adm.exe <command>` on Windows; or `python -m adm <command>` when tools/adm not present).
 
 | Command | What it does | When to use |
 |--------|----------------|-------------|
@@ -49,7 +49,7 @@ Invoke as: `tools/adm <command>` (or `tools/adm.exe <command>` on Windows; or `u
 | `--list-diff <file> [N]` | Shows unified or hex diffs against up to N backups. | To compare current vs previous versions before rollback. |
 | `--emit-boot-log [roots...]` | Runs pytest then verify-all; writes `boot_test.log` and verify reports. | One-shot “boot” check: tests + verification. |
 | `--install-adid-rules [target_dir]` | Installs Cursor rules, adm-exe skill, framework doc, and `adm.exe` into the target project. | To onboard a project with ADID (creates `.cursor/`, `docs/`, `tools/adm.exe`). |
-| `--snapshot-context [snapshot.json]` | Captures repo context (git head, uv.lock, versions) to a JSON file. | Before major changes; then use `--preflight` to detect drift. |
+| `--snapshot-context [snapshot.json]` | Captures repo context (git head, detected lockfiles, tool versions) to a JSON file. | Before major changes; then use `--preflight` to detect drift. |
 | `--preflight [snapshot.json] [--strict]` | Compares current tree to snapshot; `--strict` fails on drift. | After changes to ensure nothing unintended changed. |
 | `--clean [root] [--all]` | Removes manifests, rotated backups, demo bundles. With `--all`, also removes baseline snapshots (`*.baseline`), JSONL ledgers (`*.adid.log.jsonl`), and strips trailing `ADID_ROLLBACK`/`SDID_ROLLBACK` blocks from text files. | To tidy artifacts under the given root (use `--all` only when you want a full cleanup). |
 | `--rg <pattern> <replacement> <file> [-- flags]` | ripgrep-based replacement with backup and ledger. | When you need regex replace but want backups/rollback; use via adm, not raw rg. |
@@ -70,7 +70,7 @@ Invoke as: `tools/adm <command>` (or `tools/adm.exe <command>` on Windows; or `u
 
 ## Recommended workflow for a new update
 
-Use `tools/adm` (or `tools/adm.exe` on Windows) when the project has it; otherwise `uv run adm`.
+Use `tools/adm` (or `tools/adm.exe` on Windows) when the project has it; otherwise `python -m adm`.
 
 1. Run `tools/adm --help`.
 2. Run `tools/adm --template all` (or a specific template like `replace`, `overwrite`, `create`, `insert`, `delete`, `pattern-rule`, `refactor-replace-function`) → creates a timestamped descriptor under `updates/`.
@@ -96,21 +96,21 @@ To build standalone executables from the repo:
 
 ~~~bash
 # Build all executables with Nuitka (recommended)
-uv run scripts/_build.py
+python scripts/_build.py
 
 # Build specific components
-uv run scripts/_build.py --adm                    # Only adm.exe
-uv run scripts/_build.py --adm --adm-rag          # adm.exe + adm-rag.exe
+python scripts/_build.py --adm                    # Only adm.exe
+python scripts/_build.py --adm --adm-rag          # adm.exe + adm-rag.exe
 
 # Build modes
-uv run scripts/_build.py --fast                   # Quick build (faster)
-uv run scripts/_build.py --release                # Release build (optimized)
+python scripts/_build.py --fast                   # Quick build (faster)
+python scripts/_build.py --release                # Release build (optimized)
 
 # Legacy PyInstaller (bundles torch, ~200MB+)
-uv run scripts/_build.py --backend=pyinstaller
+python scripts/_build.py --backend=pyinstaller
 
 # Get help
-uv run scripts/_build.py --help
+python scripts/_build.py --help
 ~~~
 
 **Build backends:**
@@ -121,9 +121,9 @@ uv run scripts/_build.py --help
 Nuitka executables do not bundle PyTorch. Install it separately:
 ~~~bash
 # CPU version
-uv pip install torch sentence-transformers
+python -m pip install torch sentence-transformers
 
 # CUDA version (for GPU acceleration)
-uv pip install torch sentence-transformers --index-url https://download.pytorch.org/whl/cu121
+python -m pip install torch sentence-transformers --index-url https://download.pytorch.org/whl/cu121
 ~~~
 

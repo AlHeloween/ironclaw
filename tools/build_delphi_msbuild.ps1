@@ -33,7 +33,7 @@ if (-not (Test-Path -LiteralPath $dproj)) {
   if ($Platform -eq 'Linux64') { $genPlatforms = 'Win32;Win64;Linux64' }
   if ($Platform -eq 'OSX64') { $genPlatforms = 'Win32;Win64;OSX64' }
   if ($Platform -eq 'OSXARM64') { $genPlatforms = 'Win32;Win64;OSX64;OSXARM64' }
-  uv run scripts\\generate_delphi_dproj.py --dpr $Dpr --platforms $genPlatforms
+  python scripts\internal\generate_delphi_dproj.py --dpr $Dpr --platforms $genPlatforms
 }
 
 $extra = @()

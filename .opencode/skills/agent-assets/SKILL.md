@@ -18,16 +18,16 @@ Agent folders are receivers (safe to delete): `.cursor/`, `.codex/`, `~/.codex/`
 2. Regenerate derived artefacts and scaffolds:
 
 ~~~bash
-uv run scripts/build_artefacts.py
+python scripts/build_artefacts.py
 ~~~
 
 3. Install scaffolds into receivers:
 
 ~~~bash
-uv run scripts/sync_agent_assets.py
+python scripts/sync_agent_assets.py
 ~~~
 
 ## Targets
 
 - Install only one receiver:
-  - `uv run scripts/sync_agent_assets.py --targets opencode`
+  - `python scripts/sync_agent_assets.py --targets opencode`

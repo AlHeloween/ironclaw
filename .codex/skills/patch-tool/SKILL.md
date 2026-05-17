@@ -9,7 +9,7 @@ Use this when you need to apply an `apply_patch`-format patch file in a way that
 
 ## Command
 
-- Apply a patch file: `tools/adm.exe --patch-tool <patch_file>` (or `uv run adm --patch-tool <patch_file>` in a repo checkout).
+- Apply a patch file: `tools/adm.exe --patch-tool <patch_file>` (or `python -m adm --patch-tool <patch_file>` in a repo checkout).
 - Dry-run (no writes): `tools/adm.exe --dry-run --patch-tool <patch_file>`
 
 ## Notes

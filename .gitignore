@@ -46,3 +46,4 @@ engine_trace_*.json
 /externals/
 
 logs/
+.opencode/data/

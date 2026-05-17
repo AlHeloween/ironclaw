@@ -14,8 +14,8 @@ This skill covers the `adm --rag ...` and `adm --query ...` commands.
 - Default embedder: `sentence_transformers` + `BAAI/bge-m3`.
 - **External Python Runtime:** `adm-rag.exe` is a small Nuitka helper that attaches `site-packages` from a compatible Python 3.13 installation found on PATH, or from `ADID_RAG_PYTHON`.
 - **PyTorch Runtime Detection:** the helper does not bundle the heavy ML stack. You must install the RAG packages into that Python separately:
-  - CPU: `uv pip install torch sentence-transformers`
-  - CUDA: `uv pip install torch sentence-transformers --index-url https://download.pytorch.org/whl/cu121`
+  - CPU: `python -m pip install torch sentence-transformers`
+  - CUDA: `python -m pip install torch sentence-transformers --index-url https://download.pytorch.org/whl/cu121`
 - At indexing start, the system displays external runtime source, detected packages, and CPU/GPU execution choice:
   ~~~
   [RAG] Embeddings backend=sentence_transformers model=BAAI/bge-m3

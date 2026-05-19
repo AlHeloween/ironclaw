@@ -432,6 +432,13 @@ async fn run_agent_loop(state: &SharedState, job_id: &str, request: AgentRequest
     let mut accumulated_text = String::new();
 
     for turn in 1..=max_turns {
+        // Rate-limit: delay between turns to avoid rushing the Claude API
+        if turn > 1 {
+            let delay_ms = config.turn_delay_ms;
+            tracing::debug!("Agent job {}: turn delay {}ms before turn {}", job_id, delay_ms, turn);
+            tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
+        }
+
         {
             let mut jobs = state.agent_jobs.write().unwrap();
             if let Some(job) = jobs.get_mut(job_id) {
@@ -502,7 +509,14 @@ async fn run_agent_loop(state: &SharedState, job_id: &str, request: AgentRequest
 
             let mut tool_results: Vec<serde_json::Value> = Vec::new();
 
+            let mut first_tool = true;
             for block in &tool_blocks {
+                // Rate-limit: delay between sequential tool calls
+                if !first_tool {
+                    tokio::time::sleep(std::time::Duration::from_millis(config.turn_delay_ms)).await;
+                }
+                first_tool = false;
+
                 let tool_name = block.get("name").and_then(|n| n.as_str()).unwrap_or("");
                 let input = block.get("input").cloned().unwrap_or(serde_json::json!({}));
                 let tool_id = block.get("id").and_then(|i| i.as_str()).unwrap_or("");

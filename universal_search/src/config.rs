@@ -218,6 +218,8 @@ pub struct AgentConfig {
     pub retry_max_attempts: u32,
     #[serde(default = "default_retry_delay_seconds")]
     pub retry_delay_seconds: u64,
+    #[serde(default = "default_turn_delay_ms")]
+    pub turn_delay_ms: u64,
     #[serde(default)]
     pub anthropic_api_key: Option<String>,
     #[serde(default)]
@@ -254,6 +256,9 @@ fn default_retry_max_attempts() -> u32 {
 fn default_retry_delay_seconds() -> u64 {
     10
 }
+fn default_turn_delay_ms() -> u64 {
+    500
+}
 
 impl Default for AgentConfig {
     fn default() -> Self {
@@ -269,6 +274,7 @@ impl Default for AgentConfig {
             max_output_tokens: default_max_output_tokens(),
             retry_max_attempts: default_retry_max_attempts(),
             retry_delay_seconds: default_retry_delay_seconds(),
+            turn_delay_ms: default_turn_delay_ms(),
             anthropic_api_key: None,
             anthropic_base_url: None,
         }

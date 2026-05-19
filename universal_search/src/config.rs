@@ -35,7 +35,7 @@ fn default_bind() -> String {
     "127.0.0.1".to_string()
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebSearchConfig {
     #[serde(default)]
     pub firecrawl: FirecrawlConfig,
@@ -43,7 +43,16 @@ pub struct WebSearchConfig {
     pub sourcegraph: SourcegraphConfig,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+impl Default for WebSearchConfig {
+    fn default() -> Self {
+        Self {
+            firecrawl: FirecrawlConfig::default(),
+            sourcegraph: SourcegraphConfig::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FirecrawlConfig {
     #[serde(default = "default_firecrawl_url")]
     pub api_url: String,
@@ -60,6 +69,21 @@ pub struct FirecrawlConfig {
     pub postgres: Option<PostgresConfig>,
     #[serde(default)]
     pub redis: Option<RedisConfig>,
+}
+
+impl Default for FirecrawlConfig {
+    fn default() -> Self {
+        Self {
+            api_url: default_firecrawl_url(),
+            api_key: None,
+            source: default_source(),
+            auto_start: default_true(),
+            repo_path: default_repo_path(),
+            commit: None,
+            postgres: None,
+            redis: None,
+        }
+    }
 }
 
 fn default_firecrawl_url() -> String {

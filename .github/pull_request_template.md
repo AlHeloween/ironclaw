@@ -40,6 +40,16 @@
 
 <!-- Does this add/modify migrations, change schema, or affect both PostgreSQL and libSQL? If yes, describe. If no, write "None". -->
 
+## Documentation Impact
+
+<!-- Did you update any docs with status "production", "test", or "execution"? -->
+<!-- If yes: update DOCINDEX.md and verify the reproduce: block still passes. -->
+<!-- If the change adds/changes a documented feature, add or update the relevant doc. -->
+
+- [ ] `DOCINDEX.md` updated (if docs changed)
+- [ ] `reproduce:` blocks verified (if docs changed)
+- [ ] `index.md` updated (if folder structure changed)
+
 ## Blast Radius
 
 <!-- What subsystems does this touch? What could break? -->

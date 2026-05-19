@@ -341,6 +341,9 @@ fn run_foreground(cli: Cli) -> anyhow::Result<()> {
         if bootstrap_result.firecrawl_installed {
             tracing::info!("Firecrawl dependencies installed");
         }
+        if bootstrap_result.firecrawl_db_ready {
+            tracing::info!("Firecrawl database ready");
+        }
         if bootstrap_result.firecrawl_started {
             tracing::info!("Firecrawl server started");
         }
@@ -401,6 +404,7 @@ fn run_diagnostics() -> anyhow::Result<()> {
     println!("\nBootstrap:");
     println!("  Firecrawl cloned: {}", bootstrap_result.firecrawl_cloned);
     println!("  Firecrawl installed: {}", bootstrap_result.firecrawl_installed);
+    println!("  Firecrawl DB ready: {}", if bootstrap_result.firecrawl_db_ready { "✓" } else { "✗" });
     println!("  PostgreSQL: {}", if bootstrap_result.postgres_available { "✓" } else { "✗" });
     println!("  Redis: {}", if bootstrap_result.redis_available { "✓" } else { "✗" });
 
@@ -437,6 +441,7 @@ fn run_bootstrap_cmd() -> anyhow::Result<()> {
     println!("Bootstrap complete:");
     println!("  Firecrawl cloned: {}", result.firecrawl_cloned);
     println!("  Firecrawl installed: {}", result.firecrawl_installed);
+    println!("  Firecrawl DB ready: {}", if result.firecrawl_db_ready { "yes" } else { "no" });
     for w in &result.warnings { println!("  ⚠ {}", w); }
     Ok(())
 }

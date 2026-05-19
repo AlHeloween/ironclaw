@@ -1,3 +1,15 @@
+---
+title: "Universal Search Agent Usage Guide"
+description: "Agent endpoint usage, direct search APIs, configuration, and service management for the Universal Search Service"
+category: service
+status: production
+components:
+  - universal_search/src/service.rs
+  - universal_search/src/web/firecrawl.rs
+  - universal_search/src/web/sourcegraph.rs
+  - universal_search/config.jsonc
+---
+
 # Universal Search Agent — Usage Guide
 
 ## Overview
@@ -20,7 +32,7 @@ nssm start universal-search
 nssm start Firecrawl
 
 # Or manually
-universal_search\dist\run.bat
+dist\universal-search\run.bat
 ```
 
 ```bash
@@ -29,7 +41,7 @@ sudo systemctl start universal-search
 sudo systemctl start firecrawl
 
 # Or manually
-cd universal_search/dist && ./universal-search-service run
+cd dist/universal-search && ./universal-search-service run
 ```
 
 ### Verify Health
@@ -200,7 +212,7 @@ curl -X POST http://127.0.0.1:3005/hybrid \
 
 ## Configuration
 
-Edit `config.jsonc` (next to the binary or at `~/.ironclaw/universal-search.jsonc`):
+Edit `universal_search/config.jsonc` and run `build.ps1` to copy it to `dist/universal-search/` (the binary reads it from next to itself). See `README.md` File Layout for details.
 
 ```jsonc
 {

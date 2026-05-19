@@ -45,5 +45,10 @@ engine_trace_*.json
 # External dependencies (searxng, etc.)
 /externals/
 
+# Universal Search Service
+/universal_search/config.jsonc
+/dist/universal-search/
+/universal_search/dist/
+
 logs/
 .opencode/data/

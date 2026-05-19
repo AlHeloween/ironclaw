@@ -2,7 +2,7 @@
 
 use crate::config::Config;
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 pub struct BootstrapResult {
     pub firecrawl_cloned: bool,
@@ -10,6 +10,7 @@ pub struct BootstrapResult {
     pub firecrawl_started: bool,
     pub postgres_available: bool,
     pub redis_available: bool,
+    pub firecrawl_db_ready: bool,
     pub warnings: Vec<String>,
 }
 
@@ -20,6 +21,7 @@ pub fn run_bootstrap(config: &Config) -> BootstrapResult {
         firecrawl_started: false,
         postgres_available: false,
         redis_available: false,
+        firecrawl_db_ready: false,
         warnings: Vec::new(),
     };
 
@@ -29,6 +31,21 @@ pub fn run_bootstrap(config: &Config) -> BootstrapResult {
         result.warnings.push(
             "PostgreSQL not available on localhost:5432 — web search may not work".to_string(),
         );
+    }
+
+    // Ensure Firecrawl database exists
+    if result.postgres_available {
+        if let Some(ref pg_config) = config.web_search.firecrawl.postgres {
+            result.firecrawl_db_ready = ensure_firecrawl_db(pg_config);
+            if !result.firecrawl_db_ready {
+                result.warnings.push(
+                    "Firecrawl database could not be created — web search will fail".to_string(),
+                );
+            }
+        } else {
+            // No postgres config — can't create DB, but PG is available
+            result.firecrawl_db_ready = false;
+        }
     }
 
     // Check Redis
@@ -128,6 +145,141 @@ fn check_redis() -> bool {
     TcpStream::connect("127.0.0.1:6379").is_ok()
 }
 
+/// Ensure the Firecrawl database exists in PostgreSQL.
+/// Returns true if it already exists or was successfully created.
+fn ensure_firecrawl_db(pg: &crate::config::PostgresConfig) -> bool {
+    let psql = match find_psql() {
+        Some(p) => p,
+        None => {
+            tracing::warn!("psql not found in PATH — cannot check/create Firecrawl database");
+            return false;
+        }
+    };
+
+    let db_name = &pg.database;
+
+    // Step 1: check if the database already exists
+    match run_psql_cmd(&psql, pg, db_name, "SELECT 1;") {
+        Ok(true) => {
+            tracing::info!("Firecrawl database '{}' already exists", db_name);
+            return true;
+        }
+        Ok(false) => {
+            // psql ran but returned an error — could be "database does not exist"
+            // or could be another issue. Try creating the DB regardless.
+        }
+        Err(_) => {
+            // psql failed to launch — will try creation anyway below
+        }
+    }
+
+    // Step 2: create the database
+    tracing::info!(
+        "Firecrawl database '{}' not found, creating on {}:{}",
+        db_name,
+        pg.host,
+        pg.port
+    );
+
+    let create_sql = format!("CREATE DATABASE \"{}\";", db_name);
+    match run_psql_cmd(&psql, pg, "postgres", &create_sql) {
+        Ok(true) => {
+            tracing::info!("Firecrawl database '{}' created successfully", db_name);
+            true
+        }
+        Ok(false) => {
+            tracing::error!(
+                "Failed to create Firecrawl database '{}' — psql returned an error",
+                db_name
+            );
+            false
+        }
+        Err(e) => {
+            tracing::error!("Failed to create Firecrawl database '{}': {}", db_name, e);
+            false
+        }
+    }
+}
+
+/// Run a psql command and return Ok(true) on success, Ok(false) on SQL error.
+fn run_psql_cmd(psql: &Path, pg: &crate::config::PostgresConfig, db: &str, sql: &str) -> anyhow::Result<bool> {
+    let mut cmd = Command::new(psql);
+    cmd.arg("-h")
+        .arg(&pg.host)
+        .arg("-p")
+        .arg(pg.port.to_string())
+        .arg("-U")
+        .arg(&pg.username)
+        .arg("-d")
+        .arg(db)
+        .arg("-w")
+        .arg("-c")
+        .arg(sql);
+
+    if let Some(ref pwd) = pg.password {
+        cmd.env("PGPASSWORD", pwd);
+    }
+
+    let output = cmd.stdin(Stdio::null()).output()?;
+    if output.status.success() {
+        Ok(true)
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        // If psql says the database doesn't exist, that's an expected error
+        if stderr.contains("does not exist") {
+            tracing::debug!("Database '{}' check: {}", db, stderr.trim());
+        } else {
+            tracing::warn!("psql error (db='{}'): {}", db, stderr.trim());
+        }
+        Ok(false)
+    }
+}
+
+/// Find psql executable in common locations or via PATH.
+fn find_psql() -> Option<std::path::PathBuf> {
+    use std::path::PathBuf;
+
+    // Check common install paths on Windows
+    #[cfg(windows)]
+    {
+        let candidates = &[
+            r"C:\Program Files\PostgreSQL\17\bin\psql.exe",
+            r"C:\Program Files\PostgreSQL\16\bin\psql.exe",
+            r"C:\Program Files\PostgreSQL\15\bin\psql.exe",
+            r"C:\Program Files\PostgreSQL\14\bin\psql.exe",
+            r"d:\USESoft\PostgreSQL\bin\psql.exe",
+        ];
+        for c in candidates {
+            let p = PathBuf::from(c);
+            if p.exists() {
+                return Some(p);
+            }
+        }
+    }
+
+    #[cfg(unix)]
+    {
+        let candidates = &[
+            "/usr/bin/psql",
+            "/usr/local/bin/psql",
+            "/opt/homebrew/bin/psql",
+        ];
+        for c in candidates {
+            let p = PathBuf::from(c);
+            if p.exists() {
+                return Some(p);
+            }
+        }
+    }
+
+    // Fall back: try bare "psql" command (relies on PATH)
+    if Command::new("psql").arg("--version").output().is_ok() {
+        return Some(PathBuf::from("psql"));
+    }
+
+    None
+}
+
 fn clone_firecrawl(repo_path: &Path, commit: &str) -> anyhow::Result<()> {
     if let Some(parent) = repo_path.parent() {
         let _ = std::fs::create_dir_all(parent);
@@ -136,6 +288,7 @@ fn clone_firecrawl(repo_path: &Path, commit: &str) -> anyhow::Result<()> {
     let output = Command::new("git")
         .args(["clone", depth, "https://github.com/firecrawl/firecrawl.git"])
         .arg(repo_path)
+        .stdin(Stdio::null())
         .output()?;
     if !output.status.success() {
         anyhow::bail!(
@@ -147,6 +300,7 @@ fn clone_firecrawl(repo_path: &Path, commit: &str) -> anyhow::Result<()> {
         let output = Command::new("git")
             .args(["checkout", commit])
             .current_dir(repo_path)
+            .stdin(Stdio::null())
             .output()?;
         if !output.status.success() {
             anyhow::bail!(
@@ -162,6 +316,7 @@ fn install_firecrawl_deps(api_dir: &Path) -> anyhow::Result<()> {
     let output = Command::new("pnpm")
         .arg("install")
         .current_dir(api_dir)
+        .stdin(Stdio::null())
         .output()?;
     if !output.status.success() {
         anyhow::bail!(
@@ -241,7 +396,6 @@ fn patch_firecrawl_harness(api_dir: &Path) {
 }
 
 fn start_firecrawl_server(api_dir: &Path) -> anyhow::Result<()> {
-    use std::process::Stdio;
     let mut env = std::env::vars().collect::<std::collections::HashMap<_, _>>();
     env.insert("USE_GO_MARKDOWN_PARSER".to_string(), "false".to_string());
 
@@ -250,6 +404,7 @@ fn start_firecrawl_server(api_dir: &Path) -> anyhow::Result<()> {
         .arg("start")
         .current_dir(api_dir)
         .envs(env)
+        .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()?;

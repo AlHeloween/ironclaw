@@ -1,3 +1,0 @@
-@echo off
-echo Starting Universal Search Service...
-"%~dp0universal-search-service.exe" run

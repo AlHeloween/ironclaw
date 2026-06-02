@@ -208,6 +208,16 @@ curl -X POST http://127.0.0.1:3005/hybrid \
   }'
 ```
 
+### Direct URL Fetch
+
+```bash
+curl -X POST http://127.0.0.1:3005/web/fetch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com"
+  }'
+```
+
 ---
 
 ## Configuration
@@ -319,4 +329,5 @@ Kill the existing process or change `service.port` in config.
 | `POST` | `/web/search` | Web search |
 | `POST` | `/web/context` | URL scraping |
 | `POST` | `/web/sourcegraph` | Code search |
+| `POST` | `/web/fetch` | Direct HTTPS fetch (no Firecrawl) |
 | `POST` | `/hybrid` | Hybrid search |

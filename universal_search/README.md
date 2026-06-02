@@ -301,6 +301,7 @@ Commands:
 | `POST` | `/web/search` | Firecrawl `/v1/search` |
 | `POST` | `/web/context` | Firecrawl `/v1/scrape` |
 | `POST` | `/web/sourcegraph` | Sourcegraph GraphQL API |
+| `POST` | `/web/fetch` | Direct HTTPS fetch (no Firecrawl) |
 | `POST` | `/hybrid` | Sourcegraph + Firecrawl (merged) |
 
 ---

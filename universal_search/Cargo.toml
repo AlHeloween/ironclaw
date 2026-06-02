@@ -19,6 +19,9 @@ path = "src/main.rs"
 # Async runtime
 tokio = { version = "1", features = ["full"] }
 
+# Playwright browser automation
+playwright-rs = "0.13"
+
 # HTTP server
 actix-web = "4"
 actix-rt = "2"

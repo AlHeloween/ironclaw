@@ -2,7 +2,7 @@
 
 use crate::config::{default_agent_system_prompt, Config};
 use crate::hybrid::{execute_hybrid, HybridRequest};
-use crate::web::{execute_context, execute_web_search, execute_sourcegraph, ContextRequest, SourcegraphRequest, WebSearchRequest};
+use crate::web::{execute_context, execute_web_search, execute_sourcegraph, execute_fetch, ContextRequest, FetchRequest, SourcegraphRequest, WebSearchRequest};
 use actix_web::{web, App, HttpResponse, HttpServer};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -214,6 +214,7 @@ impl SearchHttpService {
                 .route("/web/search", web::post().to(web_search_handler))
                 .route("/web/context", web::post().to(web_context_handler))
                 .route("/web/sourcegraph", web::post().to(sourcegraph_handler))
+                .route("/web/fetch", web::post().to(web_fetch_handler))
                 .route("/hybrid", web::post().to(hybrid_handler))
         })
         .bind(&addr)?
@@ -775,6 +776,16 @@ async fn sourcegraph_handler(
     match execute_sourcegraph(&state.http_client, &state.config.web_search.sourcegraph, &body).await {
         Ok(response) => HttpResponse::Ok().json(response),
         Err(e) => HttpResponse::InternalServerError().json(ErrorResponse { error: e }),
+    }
+}
+
+async fn web_fetch_handler(
+    state: web::Data<Arc<SharedState>>,
+    body: web::Json<FetchRequest>,
+) -> HttpResponse {
+    match execute_fetch(&state.http_client, &body).await {
+        Ok(response) => HttpResponse::Ok().json(response),
+        Err(e) => HttpResponse::BadRequest().json(ErrorResponse { error: e }),
     }
 }
 

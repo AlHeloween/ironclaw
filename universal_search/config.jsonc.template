@@ -26,9 +26,10 @@
   // Web search (Firecrawl API + Sourcegraph)
   "web_search": {
     "firecrawl": {
-      "api_url": "http://localhost:3002",
+      // Search backend URL (crw-server speaking Firecrawl API protocol)
+      "api_url": "http://localhost:3000",
       "api_key": null,
-      "source": "local",
+      "source": "crw-server",
       "auto_start": true,
       "repo_path": "./firecrawl",
       "commit": null,

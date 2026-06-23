@@ -15,7 +15,7 @@ Use this skill when performing declarative file updates, verification, rollback,
 2. **To add a new update:** Create template (`tools/adm.exe --template/--tpl <NAME> [output_dir]` - Generate a timestamped XML descriptor template under `./updates/` by default (use `[TIMESTAMP]_[short_semantic_dominant].xml`; legacy `_update_scaffold.xml` is deprecated). Templates: `all`, `replace`, `overwrite`, `create`, `insert`, `delete`, `pattern-rule`, `binary-overwrite`, `binary-hex-replace`, `refactor-replace-function`), edit the generated descriptor in `updates/` (prefer using the agent `apply_patch` tool for XML edits), then apply (`--apply`). To **replay history** (inspect descriptors in chronological order; information-only by default): use `--replay-updates [dir] [--until TIMESTAMP] [--limit N]` (add `--unified-diff` for exact hunks; add `--execute --workdir DIR --confirm-execute APPLY_IN_WORKDIR_ONLY` to apply only inside an isolated copy). Do not write XML descriptors from scratch. Multiple backups per file are by design and an advantage (rollback, traceability; project stays manageable).
 3. **Never** write a new descriptor XML from scratch; you will get tags, MD5, or modes wrong. Use the template, then edit.
 
-ADID workflow and communication rules are in `docs/ADID_Framework_15_3.md`. Prefer that document for structure and epistemic markers.
+ADID workflow and communication rules are in the project-local `docs/ADID_Framework_<version>.md` when installed. Prefer the newest available framework document for structure and epistemic markers.
 
 ---
 
@@ -57,7 +57,7 @@ Invoke as: `tools/adm <command>` (or `tools/adm.exe <command>` on Windows; or `p
 | `--patch-tool <patch_file>` | Applies an `apply_patch`-format patch file with backups + per-file ledger entries. | When you want apply_patch-style edits but still want ADID backups and ledgers. |
 | `--move <src> <dst> [--execute] [--no-fix-updates] [--no-fix-refs] [--updates-dir DIR] [roots...]` | Move/rename a file and rewrite occurrences of the old path in `updates/` and other roots (literal, handles both `/` and `\\`). | When you rename/move a file and want to keep `updates/` descriptors + docs/code references consistent. **Dry-run by default**; pass `--execute` to perform writes. |
 | `--cmd-runner <args...>` | Pass-through helper to execute `cmd_runner` with the given args (Windows-only). | When you need to start/list/status/tail cmd_runner runs but want it recorded in the same adm progress-log cycle. |
-| `--rag settings|list|index|docs|status|delete ...` | Manage local RAG indexes (sqlite) using `adm.json`. | When you want indexed querying of code/docs with the local `sentence_transformers` + `BAAI/bge-m3` embedder. In bundled installs, `adm.exe` forwards this to `adm-rag.exe`. |
+| `--rag settings|list|index|docs|status|delete ...` | Manage local RAG indexes (sqlite) using `adm.json`. | When you want indexed querying of code/docs with the local `sentence_transformers` + `BAAI/bge-base-en-v1.5` embedder. In bundled installs, `adm.exe` forwards this to `adm-rag.exe`. |
 | `--query <index_name> <request...>` | Query a RAG index and print top hits (file + line ranges). | When you want an exact, line-referenced retrieval result. In bundled installs, `adm.exe` forwards this to `adm-rag.exe`. |
 | `--mcp` / `--mcp-http [host] [port]` | Run adm as an MCP server (stdio or HTTP). Startup validates local embedder readiness; `initialize` reports the resolved RAG DB path and configured embedding backend/model/device. | When you want to expose RAG tools to an MCP-capable client or run it as a local service. In bundled installs, `adm.exe` forwards this to `adm-rag.exe`. |
 | `--log-insight <message>` | Appends a timestamped entry to `insights.md`. | Optional logging of a decision or finding. |
@@ -92,25 +92,25 @@ Bundled binary split note:
 
 ## Building Executables
 
-To build standalone executables from the repo:
+When working in the `adm` source repository, use its local build script. In other projects, treat executable builds as project-specific and inspect the local build documentation first. Concrete fixture for expected script names: `artefacts/examples/project-agnostic/scripts/`.
 
 ~~~bash
 # Build all executables with Nuitka (recommended)
-python scripts/_build.py
+python <real_build_pipeline>/_build.py
 
 # Build specific components
-python scripts/_build.py --adm                    # Only adm.exe
-python scripts/_build.py --adm --adm-rag          # adm.exe + adm-rag.exe
+python <real_build_pipeline>/_build.py --adm                    # Only adm.exe
+python <real_build_pipeline>/_build.py --adm --adm-rag          # adm.exe + adm-rag.exe
 
 # Build modes
-python scripts/_build.py --fast                   # Quick build (faster)
-python scripts/_build.py --release                # Release build (optimized)
+python <real_build_pipeline>/_build.py --fast                   # Quick build (faster)
+python <real_build_pipeline>/_build.py --release                # Release build (optimized)
 
 # Legacy PyInstaller (bundles torch, ~200MB+)
-python scripts/_build.py --backend=pyinstaller
+python <real_build_pipeline>/_build.py --backend=pyinstaller
 
 # Get help
-python scripts/_build.py --help
+python <real_build_pipeline>/_build.py --help
 ~~~
 
 **Build backends:**

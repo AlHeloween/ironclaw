@@ -10,8 +10,7 @@ Separate from `index.md` which is the folder-based repository map.
 
 | Document | Owner | Entrypoints | Last Verified |
 |----------|-------|-------------|:---:|
-| `universal_search/README.md` | universal_search team | Service README, reproduce block | 2026-05-19 |
-| `universal_search/AGENT_GUIDE.md` | universal_search team | Agent endpoint usage, API reference | 2026-05-19 |
+| — | — | universal_search SearXNG+crw-server pipeline, agent prompt caching, all NSSM services (v0.3.0) | 2026-06-14 |
 | `docs/extensions/web-search.md` | extensions team | Web search extension setup | 2026-03-04 |
 
 ## Internal Specs
@@ -70,4 +69,4 @@ Documents in the **Production** section above must satisfy:
 
 ---
 
-> **Last updated:** 2026-05-19
+> **Last updated:** 2026-06-13

@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "crates/ironclaw_common", "crates/ironclaw_safety", "crates/ironclaw_skills", "crates/ironclaw_engine", "crates/ironclaw_gateway", "crates/ironclaw_tui", "universal_search"]
+members = [".", "crates/ironclaw_common", "crates/ironclaw_safety", "crates/ironclaw_skills", "crates/ironclaw_engine", "crates/ironclaw_gateway", "crates/ironclaw_tui"]
 exclude = [
     "channels-src/discord",
     "channels-src/telegram",
@@ -17,6 +17,7 @@ exclude = [
     "tools-src/telegram",
     "fuzz",
     "crates/ironclaw_safety/fuzz",
+    "universal_search",
 ]
 
 [package]

@@ -42,23 +42,10 @@ Reusable library crates, compiled independently of the main binary.
 
 ---
 
-## `universal_search/` — Universal Search Service
+## `universal_search/` — Universal Search Service [EXTRACTED]
 
-Standalone Rust binary providing web search (Firecrawl), code search (Sourcegraph GraphQL), URL scraping, hybrid search, and AI-powered autonomous research (Claude agent loop). Binds on `127.0.0.1:3005`.
-
-| Item | Purpose |
-|------|---------|
-| `src/main.rs` | Binary entry point, CLI (run, start, stop, diag, bootstrap, service, logs) |
-| `src/service.rs` | HTTP server (actix-web), agent loop, Claude API client, rate limiting |
-| `src/bootstrap.rs` | Startup checks (PG, Redis), DB auto-creation, git clone, pnpm install, Firecrawl start |
-| `src/config.rs` | JSONC config types — service, agent, firecrawl, sourcegraph, bootstrap |
-| `src/web/firecrawl.rs` | Firecrawl /v1/search API client |
-| `src/web/context.rs` | Firecrawl /v1/scrape API client |
-| `src/web/sourcegraph.rs` | Sourcegraph GraphQL API client |
-| `src/hybrid.rs` | Combined Sourcegraph + Firecrawl search |
-| `src/ring_log.rs` | 1MB circular buffer log writer |
-| `AGENT_GUIDE.md` | Agent endpoint usage guide |
-| `README.md` | Full service documentation (production status) |
+Extracted to standalone repo: `https://github.com/near/universal-search` (v0.2.0). See `D:/zPython/universal-search/` for the current working copy.
+Web search backend: crw-server (Rust) → SearXNG (Python) on port 3434 — full Google/Bing/Wikipedia search. Websurfx (Rust, port 3008) for user-facing web UI.
 
 ---
 

@@ -5,6 +5,7 @@ use universal_search_service::web::{execute_web_search, WebSearchRequest, execut
 
 #[tokio::test]
 async fn test_web_search_success() {
+    let client = reqwest::Client::new();
     let mut mock_server = mockito::Server::new_async().await;
     let mock_url = mock_server.url();
 
@@ -26,7 +27,7 @@ async fn test_web_search_success() {
         only_main_content: None,
     };
 
-    let response = execute_web_search(&config, &request).await.unwrap();
+    let response = execute_web_search(&client, &config, &request).await.unwrap();
     assert_eq!(response.query, "test query");
     assert_eq!(response.result_count, 1);
     assert_eq!(response.results[0].title, "Test Page");
@@ -36,6 +37,7 @@ async fn test_web_search_success() {
 
 #[tokio::test]
 async fn test_web_search_with_api_key() {
+    let client = reqwest::Client::new();
     let mut mock_server = mockito::Server::new_async().await;
     let mock_url = mock_server.url();
 
@@ -58,13 +60,14 @@ async fn test_web_search_with_api_key() {
         only_main_content: None,
     };
 
-    let response = execute_web_search(&config, &request).await.unwrap();
+    let response = execute_web_search(&client, &config, &request).await.unwrap();
     assert_eq!(response.result_count, 0);
     mock.assert();
 }
 
 #[tokio::test]
 async fn test_web_search_error_4xx() {
+    let client = reqwest::Client::new();
     let mut mock_server = mockito::Server::new_async().await;
     let mock_url = mock_server.url();
 
@@ -85,7 +88,7 @@ async fn test_web_search_error_4xx() {
         only_main_content: None,
     };
 
-    let result = execute_web_search(&config, &request).await;
+    let result = execute_web_search(&client, &config, &request).await;
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("401"));
     mock.assert();
@@ -93,6 +96,7 @@ async fn test_web_search_error_4xx() {
 
 #[tokio::test]
 async fn test_context_scrape_success() {
+    let client = reqwest::Client::new();
     let mut mock_server = mockito::Server::new_async().await;
     let mock_url = mock_server.url();
 
@@ -114,7 +118,7 @@ async fn test_context_scrape_success() {
         only_main_content: None,
     };
 
-    let response = execute_context(&config, &request).await.unwrap();
+    let response = execute_context(&client, &config, &request).await.unwrap();
     assert_eq!(response.query, "summarize");
     assert_eq!(response.url, "http://example.com/article");
     assert!(response.markdown.unwrap().contains("Article Title"));
@@ -123,6 +127,7 @@ async fn test_context_scrape_success() {
 
 #[tokio::test]
 async fn test_context_scrape_url_too_long() {
+    let client = reqwest::Client::new();
     let config = FirecrawlConfig::default();
     let request = ContextRequest {
         query: "test".to_string(),
@@ -131,13 +136,14 @@ async fn test_context_scrape_url_too_long() {
         only_main_content: None,
     };
 
-    let result = execute_context(&config, &request).await;
+    let result = execute_context(&client, &config, &request).await;
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("exceeds maximum length"));
 }
 
 #[tokio::test]
 async fn test_context_scrape_error_404() {
+    let client = reqwest::Client::new();
     let mut mock_server = mockito::Server::new_async().await;
     let mock_url = mock_server.url();
 
@@ -158,7 +164,7 @@ async fn test_context_scrape_error_404() {
         only_main_content: None,
     };
 
-    let result = execute_context(&config, &request).await;
+    let result = execute_context(&client, &config, &request).await;
     assert!(result.is_err());
     mock.assert();
 }

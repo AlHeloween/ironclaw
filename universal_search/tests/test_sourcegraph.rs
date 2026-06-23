@@ -5,6 +5,7 @@ use universal_search_service::web::{execute_sourcegraph, SourcegraphRequest};
 
 #[tokio::test]
 async fn test_sourcegraph_search_success() {
+    let client = reqwest::Client::new();
     let mut mock_server = mockito::Server::new_async().await;
     let mock_url = mock_server.url();
 
@@ -25,7 +26,7 @@ async fn test_sourcegraph_search_success() {
         count: None,
     };
 
-    let response = execute_sourcegraph(&config, &request).await.unwrap();
+    let response = execute_sourcegraph(&client, &config, &request).await.unwrap();
     assert_eq!(response.query, "async fn search");
     assert_eq!(response.match_count, 1);
     assert_eq!(response.results.len(), 1);
@@ -39,6 +40,7 @@ async fn test_sourcegraph_search_success() {
 
 #[tokio::test]
 async fn test_sourcegraph_with_repo_filter() {
+    let client = reqwest::Client::new();
     let mut mock_server = mockito::Server::new_async().await;
     let mock_url = mock_server.url();
 
@@ -59,13 +61,14 @@ async fn test_sourcegraph_with_repo_filter() {
         count: None,
     };
 
-    let response = execute_sourcegraph(&config, &request).await.unwrap();
+    let response = execute_sourcegraph(&client, &config, &request).await.unwrap();
     assert_eq!(response.match_count, 0);
     mock.assert();
 }
 
 #[tokio::test]
 async fn test_sourcegraph_with_token() {
+    let client = reqwest::Client::new();
     let mut mock_server = mockito::Server::new_async().await;
     let mock_url = mock_server.url();
 
@@ -86,13 +89,14 @@ async fn test_sourcegraph_with_token() {
         count: None,
     };
 
-    let response = execute_sourcegraph(&config, &request).await.unwrap();
+    let response = execute_sourcegraph(&client, &config, &request).await.unwrap();
     assert_eq!(response.match_count, 0);
     mock.assert();
 }
 
 #[tokio::test]
 async fn test_sourcegraph_empty_results() {
+    let client = reqwest::Client::new();
     let mut mock_server = mockito::Server::new_async().await;
     let mock_url = mock_server.url();
 
@@ -112,7 +116,7 @@ async fn test_sourcegraph_empty_results() {
         count: None,
     };
 
-    let response = execute_sourcegraph(&config, &request).await.unwrap();
+    let response = execute_sourcegraph(&client, &config, &request).await.unwrap();
     assert_eq!(response.match_count, 0);
     assert!(response.results.is_empty());
     mock.assert();
@@ -120,6 +124,7 @@ async fn test_sourcegraph_empty_results() {
 
 #[tokio::test]
 async fn test_sourcegraph_error_response() {
+    let client = reqwest::Client::new();
     let mut mock_server = mockito::Server::new_async().await;
     let mock_url = mock_server.url();
 
@@ -139,7 +144,7 @@ async fn test_sourcegraph_error_response() {
         count: None,
     };
 
-    let result = execute_sourcegraph(&config, &request).await;
+    let result = execute_sourcegraph(&client, &config, &request).await;
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("Rate limit exceeded"));
     mock.assert();

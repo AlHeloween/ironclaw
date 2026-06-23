@@ -73,7 +73,7 @@ alwaysApply: true
   - Query: `tools/adm.exe --query <index_name> <request...>`
   - Status: `tools/adm.exe --rag status <index_name>` and docs: `tools/adm.exe --rag docs <index_name> [limit]`
   - Treat `.adid_rag/` as local-only runtime state. Do not commit staged models, sqlite stores, logs, or generated runtime payloads from that tree.
-  - **Default embedder:** local `sentence_transformers` + `BAAI/bge-m3` configured through `rag.embed.backend`, `rag.embed.model`, `rag.embed.device`, and `rag.embed.batch_size`.
+  - **Default embedder:** local `sentence_transformers` + `BAAI/bge-base-en-v1.5` configured through `rag.embed.backend`, `rag.embed.model`, and `rag.embed.batch_size`.
   - **Hybrid retrieval:** Queries use full-vector similarity + dual-quaternion signature shortlist/rerank + SQLite FTS5, fused via Reciprocal Rank Fusion (RRF). Tune via `rag.vector_top_k`, `rag.fts_top_k`, `rag.dq_top_k`, `rag.weight_vector`, `rag.weight_fts`, `rag.weight_dq`, `rag.rrf_k`, and the `rag.dq_*` settings.
 
 - **MCP server (RAG tools):**

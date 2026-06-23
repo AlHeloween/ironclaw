@@ -650,12 +650,49 @@ async fn call_claude(
 
     let url = format!("{}/v1/messages", anthropic_base);
 
+    let use_caching = config.prompt_caching;
+
+    // --- Prompt caching: mark cacheable blocks for Anthropic's server-side cache ---
+    let system_payload = if use_caching {
+        // System prompt as content block array with cache_control (constant across turns).
+        serde_json::json!([{
+            "type": "text",
+            "text": system_prompt,
+            "cache_control": {"type": "ephemeral"}
+        }])
+    } else {
+        serde_json::json!(system_prompt)
+    };
+
+    // Tools: clone and mark the last tool definition with cache_control.
+    let mut cached_tools: Vec<serde_json::Value> = tools.to_vec();
+    if use_caching {
+        if let Some(last) = cached_tools.last_mut() {
+            last.as_object_mut()
+                .map(|obj| {
+                    obj.insert("cache_control".to_string(),
+                        serde_json::json!({"type": "ephemeral"}));
+                });
+        }
+    }
+
+    // Messages: mark the second-to-last message (fixed history prefix) for caching.
+    let mut cached_messages: Vec<serde_json::Value> = messages.to_vec();
+    if use_caching {
+        let msg_len = cached_messages.len();
+        if msg_len >= 2 {
+            if let Some(prev) = cached_messages.get_mut(msg_len - 2) {
+                add_cache_to_content(prev);
+            }
+        }
+    }
+
     let request_body = serde_json::json!({
         "model": model,
         "max_tokens": config.max_output_tokens,
-        "system": system_prompt,
-        "messages": messages,
-        "tools": tools,
+        "system": system_payload,
+        "messages": cached_messages,
+        "tools": cached_tools,
         "tool_choice": {"type": "auto"}
     });
 
@@ -663,6 +700,9 @@ async fn call_claude(
     headers.insert("x-api-key", reqwest::header::HeaderValue::from_str(&anthropic_key)
         .map_err(|e| format!("Invalid API key header: {}", e))?);
     headers.insert("anthropic-version", reqwest::header::HeaderValue::from_static("2023-06-01"));
+    if use_caching {
+        headers.insert("anthropic-beta", reqwest::header::HeaderValue::from_static("prompt-caching-2024-07-31"));
+    }
     headers.insert("content-type", reqwest::header::HeaderValue::from_static("application/json"));
 
     for attempt in 0..config.retry_max_attempts {
@@ -696,6 +736,20 @@ async fn call_claude(
     }
 
     Err(format!("Max retries ({}) exceeded", config.retry_max_attempts))
+}
+
+/// Mark the last content block in a message with cache_control for
+/// Anthropic prompt caching. This applies to messages whose content
+/// is a JSON array of content blocks (text + tool_use).
+fn add_cache_to_content(msg: &mut serde_json::Value) {
+    if let Some(content) = msg.get_mut("content").and_then(|c| c.as_array_mut()) {
+        if let Some(last) = content.last_mut() {
+            if let Some(obj) = last.as_object_mut() {
+                obj.insert("cache_control".to_string(),
+                    serde_json::json!({"type": "ephemeral"}));
+            }
+        }
+    }
 }
 
 async fn execute_tool(state: &SharedState, tool_name: &str, input: &serde_json::Value) -> serde_json::Value {

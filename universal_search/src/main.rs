@@ -323,7 +323,7 @@ fn run_foreground(cli: Cli) -> anyhow::Result<()> {
     if let Some(port) = cli.port { config.service.port = port; }
     if let Some(ref bind) = cli.bind { config.service.bind_address = bind.clone(); }
 
-    if config.web_search.firecrawl.source == "local" {
+    if config.web_search.firecrawl.source == "local" && config.web_search.firecrawl.auto_start {
         let bootstrap_result = bootstrap::run_bootstrap(&config);
         for warning in &bootstrap_result.warnings {
             tracing::warn!("Bootstrap: {}", warning);

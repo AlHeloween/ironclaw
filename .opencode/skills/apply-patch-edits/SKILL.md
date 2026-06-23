@@ -20,15 +20,12 @@ cross-conflicts and ambiguous provenance.
 
 1. Make changes only via the `apply_patch` tool (atomic, reviewable diffs).
 2. Do not edit receiver copies under `.codex/`, `~/.codex/`, `.cursor/`, `.opencode/` directly.
-3. After editing canonical assets, sync receivers so installs and tooling stay consistent:
+3. After editing canonical assets, sync receivers so installs and tooling stay consistent. Use the asset-source repository's real build/sync commands.
 
-~~~bash
-python scripts/build_artefacts.py
-python scripts/sync_agent_assets.py
-~~~
+Concrete fixture for expected script names: `artefacts/examples/project-agnostic/scripts/`.
 
 If you changed only canonical skills and want a faster sync of receiver skill folders:
 
 ~~~bash
-python scripts/sync_skills_from_artefacts.py --prune
+python <real_asset_pipeline>/sync_skills_from_artefacts.py --prune
 ~~~

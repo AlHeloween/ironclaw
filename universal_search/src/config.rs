@@ -87,11 +87,11 @@ impl Default for FirecrawlConfig {
 }
 
 fn default_firecrawl_url() -> String {
-    "http://localhost:3002".to_string()
+    "http://localhost:3000".to_string()
 }
 
 fn default_source() -> String {
-    "local".to_string()
+    "crw-server".to_string()
 }
 
 fn default_repo_path() -> String {
@@ -224,6 +224,11 @@ pub struct AgentConfig {
     pub anthropic_api_key: Option<String>,
     #[serde(default)]
     pub anthropic_base_url: Option<String>,
+    /// Enable Anthropic prompt caching: caches system prompt + tools + message history
+    /// server-side for 5 minutes, reducing per-turn latency ~50% and input token cost ~90%.
+    /// Disable if using a proxy that strips the `anthropic-beta` header.
+    #[serde(default = "default_true")]
+    pub prompt_caching: bool,
 }
 
 fn default_max_turns() -> u32 {
@@ -277,6 +282,7 @@ impl Default for AgentConfig {
             turn_delay_ms: default_turn_delay_ms(),
             anthropic_api_key: None,
             anthropic_base_url: None,
+            prompt_caching: true,
         }
     }
 }

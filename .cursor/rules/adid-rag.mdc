@@ -1,0 +1,80 @@
+---
+description: ADID RAG — local code search with dual-quaternion ranking, fd discovery, and MCP daemon
+alwaysApply: true
+---
+
+## ADID RAG — Local Code Retrieval
+
+ADID RAG is a local-first semantic search engine for your codebase. It uses `fd`
+for gitignore-aware file discovery, embeds source files into a vector index, and
+answers natural-language queries with sub-second latency via MCP HTTP server.
+
+### Quick Start
+
+1. **Install dependencies** (one-time):
+   ```bash
+   pip install torch --index-url https://download.pytorch.org/whl/cu124
+   pip install sentence-transformers
+   ```
+
+2. **Index the project** (`fd` respects `.gitignore`, SHA-256 incremental):
+   ```bash
+   adm --rag index <project_name> .
+   ```
+
+3. **Start the model daemon** (optional, for sub-second queries):
+   ```bash
+   adm-rag --mcp-http 127.0.0.1 7990
+   ```
+   Loads the BGE model once; all projects share it via `config_path` parameter.
+
+### In This Project
+
+- **Before any code search**, query the local index first:
+  ```bash
+  adm --query <index_name> "<your question>"
+  ```
+  Auto-forwards to MCP server if running (0.05s), otherwise loads model locally (~6-10s).
+
+- **Index is incremental**: SHA-256 per file — unchanged files skipped.
+  Embedder/chunker config change triggers full re-index.
+
+- **File discovery**: `fd` (bundled in `tools/fd.exe`) walks the tree respecting `.gitignore`.
+  Extensions from `include_globs` are passed as `--extension` filters.
+
+- **Delegation**: Frozen `adm-rag.exe` (without torch) auto-delegates to system `adm`.
+  `adm` forwards `--query`/`--rag`/`--mcp` to `tools/adm-rag.exe`.
+
+### Commands Reference
+
+| Command | Purpose |
+|---|---|
+| `adm-rag --init` | Check deps, advise if missing (never installs) |
+| `adm-rag --rag-status` | Full environment health check |
+| `adm --rag index <name> [roots]` | Create/update index |
+| `adm --query <name> "<text>"` | Semantic search |
+| `adm --rag status <name>` | Show index stats |
+| `adm --rag docs <name> [limit]` | List indexed documents |
+| `adm --rag delete <name>` | Remove index |
+| `adm --mcp-http [host] [port]` | Start model daemon |
+
+### Architecture
+
+```
+adm --query → [frozen?] → tools/adm-rag.exe → [no torch?] → system adm/python
+                  │                                            │
+            pip-installed mode                          torch available
+                  │                                            │
+                  └──────────── MCP HTTP :7990 ────────────────┘
+                               (model loaded once)
+
+Project A → .adid_rag/data/A.sqlite3
+Project B → .adid_rag/data/B.sqlite3
+```
+
+### Key Defaults
+
+- Index DB: `.adid_rag/data/<name>.sqlite3`
+- Embedder: `BAAI/bge-base-en-v1.5` (768D) via `sentence_transformers`
+- File discovery: `fd` respecting `.gitignore`
+- Gitignored: `.adid_rag/`, `.rag_env/`

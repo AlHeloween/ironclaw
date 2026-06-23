@@ -192,7 +192,10 @@ const initializeBrowser = async () => {
       '--disable-accelerated-2d-canvas',
       '--no-first-run',
       '--no-zygote',
-      '--disable-gpu'
+      '--disable-gpu',
+      '--disable-blink-features=AutomationControlled',
+      '--window-size=1920,1080',
+      '--start-maximized',
     ]
   });
 };
@@ -224,6 +227,38 @@ const createContext = async (skipTlsVerification: boolean = false): Promise<{ co
   }
 
   const newContext = await browser.newContext(contextOptions);
+
+  // Stealth: hide automation traces from anti-bot detection
+  await newContext.addInitScript(() => {
+    // Override navigator.webdriver
+    Object.defineProperty(navigator, 'webdriver', { get: () => false });
+    // Override chrome.runtime
+    (window as any).chrome = {
+      runtime: {},
+      loadTimes: () => {},
+      csi: () => {},
+      app: {},
+    };
+    // Headless browsers have 0 outerWidth/Height — fix
+    Object.defineProperty(window, 'outerWidth', { get: () => screen.width });
+    Object.defineProperty(window, 'outerHeight', { get: () => screen.height });
+    // Override permissions
+    const originalQuery = (window.navigator as any).permissions?.query;
+    if (originalQuery) {
+      (window.navigator as any).permissions.query = (parameters: any) => {
+        if (parameters.name === 'notifications') {
+          return Promise.resolve({ state: Notification.permission } as PermissionStatus);
+        }
+        return originalQuery.call(navigator.permissions, parameters);
+      };
+    }
+    // Override plugins length
+    Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+    // Override languages
+    Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+    // Override vendor
+    Object.defineProperty(navigator, 'vendor', { get: () => 'Google Inc.' });
+  });
 
   if (BLOCK_MEDIA) {
     await newContext.route('**/*.{png,jpg,jpeg,gif,svg,mp3,mp4,avi,flac,ogg,wav,webm}', async (route: Route, request: PlaywrightRequest) => {

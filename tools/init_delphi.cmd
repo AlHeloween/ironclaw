@@ -54,6 +54,10 @@ if errorlevel 1 (
   exit /b 1
 )
 
+rem rsvars64 may expose bin64 without bin; resource tools such as brcc32 live in bin.
+if exist "%DELPHI_ROOT%\bin" set "PATH=%DELPHI_ROOT%\bin;%PATH%"
+if exist "%DELPHI_ROOT%\bin64" set "PATH=%DELPHI_ROOT%\bin64;%PATH%"
+
 where dcc32
 if errorlevel 1 (
   echo [ERROR] dcc32.exe not found after rsvars.

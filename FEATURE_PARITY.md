@@ -375,7 +375,7 @@ This document tracks feature parity between IronClaw (Rust implementation) and O
 |---------|----------|----------|-------|
 | Universal Search Service | ❌ | ✅ | Single binary: local tantivy BM25 + web Firecrawl + Sourcegraph hybrid |
 | Local code search (tantivy FTS + symbols) | ❌ | ✅ | Rust/TS/JS/Python symbol extraction, circular 10KB log buffer |
-| Web search (Firecrawl local or cloud) | ❌ | ✅ | Auto-bootstrap: clone Firecrawl, check PostgreSQL/Redis, auto-start |
+| Web search (Firecrawl local or cloud) | ❌ | ✅ | Auto-bootstrap: clone Firecrawl, check PostgreSQL/Redis, auto-start. Search via crw-server → local SearXNG port 3434. |
 | Hybrid search mode (local + Sourcegraph) | ❌ | ✅ | Combines local code search with public code search |
 | Auto-start from `ironclaw run` | ❌ | ✅ | SearchServiceManager spawns universal-search-service on agent startup |
 | `ironclaw search` CLI | ❌ | ✅ | start/stop/status/indexes/index subcommands |

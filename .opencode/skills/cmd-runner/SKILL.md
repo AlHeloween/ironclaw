@@ -86,6 +86,7 @@ All subprocesses created by cmd_runner open with `SW_SHOWMINNOACTIVE`:
 - Release bundle: `cmd_runner.exe tail <run_id>` (bundle root)
   - Start with non-follow `tail` for a compact snapshot.
   - Add `--follow` only when live streaming is needed.
+  - Use `--wait-ms N` to tail and keep following until the run finishes, checking for new output every N milliseconds.
   - Prefer repeated `status`/non-follow `tail` checks over ad hoc shell sleeps; keep delay/wait handling inside the cmd_runner workflow.
 
 4) Inject input programmatically (bridge):

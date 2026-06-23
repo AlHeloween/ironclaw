@@ -40,6 +40,17 @@ foreach ($line in $envBlock) {
   [System.Environment]::SetEnvironmentVariable($name, $value, 'Process')
 }
 
+# rsvars64 may expose bin64 without bin; resource tools such as brcc32 live in bin.
+$pathParts = @()
+foreach ($candidate in @((Join-Path $delphiRoot 'bin64'), (Join-Path $delphiRoot 'bin'))) {
+  if ((Test-Path -LiteralPath $candidate) -and ($env:PATH -notlike "*$candidate*")) {
+    $pathParts += $candidate
+  }
+}
+if ($pathParts.Count -gt 0) {
+  $env:PATH = (($pathParts + $env:PATH) -join [IO.Path]::PathSeparator)
+}
+
 Write-Host "[OK] Delphi environment initialized for $Platform."
 Write-Host "default_platform=Win64"
 Write-Host "detected_root=$delphiRoot"

@@ -1,90 +1,59 @@
 ---
 title: "Universal Search Service"
-description: "Unified search service: web search (Firecrawl), code search (Sourcegraph), AI-powered autonomous research (Claude Agent), and hybrid search"
+description: "Unified search service: web search (crw-server → SearXNG), URL scraping, code search (Sourcegraph), AI-powered autonomous research (Claude Agent with prompt caching), hybrid search"
 category: service
 status: production
+reproduce: "pwsh universal_search/build.ps1 && curl http://127.0.0.1:3005/health"
 components:
   - universal_search/src/main.rs
   - universal_search/src/service.rs
-  - universal_search/src/bootstrap.rs
   - universal_search/src/config.rs
   - universal_search/src/hybrid.rs
   - universal_search/src/web/firecrawl.rs
   - universal_search/src/web/sourcegraph.rs
   - universal_search/src/web/context.rs
+  - universal_search/src/web/fetch.rs
+  - universal_search/src/web/browser_fetch.rs
   - universal_search/src/ring_log.rs
   - universal_search/config.jsonc.template
   - universal_search/Cargo.toml
+last_verified: 2026-06-14
 ---
 
 # Universal Search Service
 
-Unified search service combining web search (Firecrawl), URL scraping, code search (Sourcegraph GraphQL API), AI-powered autonomous research (Claude agent loop), and hybrid search.
+Unified search service combining web search (crw-server → SearXNG), URL scraping, code search (Sourcegraph GraphQL API), AI-powered autonomous research (Claude agent loop), and hybrid search.
 
-Binds a single HTTP server (default `127.0.0.1:3005`) and proxies search/agent requests to Firecrawl (default `localhost:3002`) and Sourcegraph.
+Binds a single HTTP server (default `127.0.0.1:3005`). Web search uses:
+- **crw-server** (port 3000): speaks Firecrawl API, proxies search to SearXNG
+- **SearXNG** (port 3434): local Python meta-search engine → Google, Bing, Wikipedia
 
 ---
 
 ## File Layout
 
 ```
-ironclaw/
-├── .gitignore                    # Protects config and build output from git
-├── dist/                         # Project-wide distribution output (gitignored)
-│   └── universal-search/         # Canonical runnable output for this service
-│       ├── universal-search-service.exe
-│       ├── config.jsonc          ← YOUR ACTIVE CONFIG with credentials
-│       ├── run.bat
-│       ├── install.bat
-│       └── AGENT_GUIDE.md
-│
-└── universal_search/             # Source crate for this service
-    ├── config.jsonc              # GITIGNORED — active config with credentials.
-    │                             # Binary does NOT read this file. It only exists
-    │                             # here so you can edit it, then build.ps1 copies
-    │                             # it to dist/universal-search/ where the binary
-    │                             # reads it from next to itself.
-    │                             #
-    │                             # Create from config.jsonc.template once.
-    │                             # Never commit to git.
-    │
-    ├── config.jsonc.template     # TRACKED — reference template. No credentials.
-    │                             # Copy this to config.jsonc and fill in your keys.
-    │
-    ├── build.ps1                 # TRACKED — single canonical build script.
-    │                             # 1. cargo build
-    │                             # 2. Copies binary → dist/universal-search/
-    │                             # 3. Copies config.jsonc → dist/universal-search/
-    │                             # 4. Creates run.bat + install.bat
-    │
-    ├── src/                      # Rust source (main.rs, service.rs, bootstrap.rs, …)
-    ├── tests/                    # Rust unit tests + Python integration tests
-    ├── Cargo.toml                # Crate manifest
-    ├── README.md                 # This file
-    └── AGENT_GUIDE.md            # Agent endpoint usage guide
+ironclaw/universal_search/
+├── src/                      # Rust source
+│   ├── main.rs               # CLI entry point
+│   ├── service.rs            # HTTP service + agent loop + Claude integration
+│   ├── config.rs             # Configuration (Agent, Firecrawl, Sourcegraph)
+│   ├── web/
+│   │   ├── firecrawl.rs      # Web search via crw-server (Firecrawl API)
+│   │   ├── context.rs        # URL scraping via crw-server
+│   │   ├── sourcegraph.rs    # Code search via Sourcegraph GraphQL
+│   │   ├── fetch.rs          # Direct HTTPS fetch
+│   │   └── browser_fetch.rs  # Playwright browser fetch
+│   ├── hybrid.rs             # Hybrid search (web + Sourcegraph)
+│   ├── ring_log.rs           # 10KB circular log buffer
+│   └── bootstrap.rs          # Legacy Firecrawl bootstrap (disabled — source: "crw-server")
+├── tests/                    # Rust unit tests + Python integration tests
+├── config.jsonc.template     # TRACKED — reference template
+├── config.jsonc              # GITIGNORED — active config with credentials
+├── Cargo.toml                # Crate manifest
+├── README.md                 # This file
+└── AGENT_GUIDE.md            # Agent endpoint usage guide
 ```
-
-### What is tracked vs gitignored
-
-| File / Directory | Git | Contains | Purpose |
-|:---|---:|---|---|
-| `config.jsonc.template` | tracked | Placeholders only | Reference template — copy once |
-| `config.jsonc` | **gitignored** | Credentials (API keys, passwords) | Your active config — edit here, never commit |
-| `dist/universal-search/config.jsonc` | **gitignored** | Copy of your config | Read by binary at runtime |
-| `dist/universal-search/` | **gitignored** | Binary, config, scripts | Canonical runnable output — sole output of `build.ps1` |
-| `target/` | **gitignored** | Cargo build artifacts | Transient |
-| Everything else | tracked | Source, docs, templates | Committed |
-
-**One config, two locations (edit one, build copies):**
-
-```
-universal_search/config.jsonc   ← YOU EDIT THIS (gitignored)
-         │  build.ps1 copies
-         ▼
-dist/universal-search/config.jsonc  ← BINARY READS THIS (gitignored)
-```
-
-The binary finds `config.jsonc` next to itself in `dist/universal-search/` — no `--config` flag needed.
 
 ---
 
@@ -94,30 +63,30 @@ The binary finds `config.jsonc` next to itself in `dist/universal-search/` — n
 # 1. Copy template and fill in credentials (do once)
 cp universal_search/config.jsonc.template universal_search/config.jsonc
 notepad universal_search/config.jsonc
-# Fill in: agent.anthropic_api_key, agent.anthropic_base_url,
-#          web_search.firecrawl.postgres.password
+# Fill in: agent.anthropic_api_key, agent.anthropic_base_url
 
-# 2. Build (produces dist/universal-search/)
-pwsh universal_search/build.ps1
+# 2. Build (produces target/release/)
+cd universal_search && cargo build --release
 
-# 3. Start PostgreSQL (port 5432) and Redis (port 6379) — Firecrawl dependencies
+# 3. Start dependent services (all NSSM-managed)
+sc.exe start crw-server
+sc.exe start searxng
+sc.exe start rsedis
+sc.exe start chromium-debug
 
-# 4. Run diagnostics (creates firecrawl DB if missing)
-.\dist\universal-search\universal-search-service.exe diag
+# 4. Start universal-search
+sc.exe start universal-search
 
-# 5. Start service
-.\dist\universal-search\run.bat
-
-# 6. Verify
+# 5. Verify
 curl http://127.0.0.1:3005/health
 # => {"status":"healthy","service":"universal-search-service"}
 
 curl -X POST http://127.0.0.1:3005/web/search \
   -H "Content-Type: application/json" \
-  -d "{\"query\":\"hello world\",\"count\":2}"
-# => {"query":"hello world","mode":"search","result_count":2,"results":[...]}
+  -d "{\"query\":\"rust programming\",\"count\":2}"
+# => {"query":"rust programming","mode":"search","result_count":2,"results":[...]}
 
-# 7. Test agent (requires Claude API)
+# 6. Test agent (requires Claude API key in config)
 curl -X POST http://127.0.0.1:3005/agent \
   -H "Content-Type: application/json" \
   -d "{\"query\":\"what time is it now?\",\"max_turns\":3}"
@@ -128,52 +97,53 @@ curl -X POST http://127.0.0.1:3005/agent \
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│              Universal Search Service (3005)                 │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │   Agent     │  │  Web Search │  │ Code Search │         │
-│  │ (Claude)    │  │ (Firecrawl) │  │(Sourcegraph)│         │
-│  │             │  │  + Scrape   │  │  GraphQL    │         │
-│  └─────────────┘  └─────────────┘  └─────────────┘         │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │              Hybrid (Sourcegraph + Web)             │    │
-│  └─────────────────────────────────────────────────────┘    │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │     Bootstrap (PG check, DB create, git clone,      │    │
-│  │               pnpm install, Firecrawl start)        │    │
-│  └─────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
-                               │
-               ┌───────────────┼───────────────┐
-               ▼               ▼               ▼
-        ┌────────────┐  ┌────────────┐  ┌────────────┐
-        │ PostgreSQL │  │   Redis    │  │ Sourcegraph│
-        │  (5432)    │  │   (6379)   │  │  (public)  │
-        └────────────┘  └────────────┘  └────────────┘
-               │
-               ▼
-        ┌────────────┐
-        │  Firecrawl │
-        │  (3002)    │
-        └────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                Universal Search Service (3005)                    │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐           │
+│  │    Agent     │  │  Web Search  │  │ Code Search  │           │
+│  │  (Claude)    │  │  (Firecrawl  │  │ (Sourcegraph)│           │
+│  │ + prompt     │  │   API via    │  │   GraphQL    │           │
+│  │  caching)    │  │  crw-server) │  │              │           │
+│  └──────┬───────┘  └──────┬───────┘  └──────────────┘           │
+│         │                 │                                      │
+└─────────┼─────────────────┼──────────────────────────────────────┘
+          │                 │
+          ▼                 ▼
+┌─────────────────┐  ┌─────────────────────────────────────────┐
+│ Anthropic API   │  │ crw-server (3000) — Rust scraper         │
+│ (external HTTPS)│  │   /v1/search  → SearXNG (3434)           │
+└─────────────────┘  │   /v1/scrape  → Playwright CDP (9222)    │
+                     └──────────────┬──────────────────────────┘
+                                    │
+                                    ▼
+                     ┌──────────────────────────────┐
+                     │ SearXNG (3434) — Python       │
+                     │   → Google, Bing, Wikipedia   │
+                     │   cache → rsedis (6379)       │
+                     └──────────────────────────────┘
 ```
 
-The service **does not implement a local code index** (Tantivy on port 3004 is a planned feature). All code search goes through Sourcegraph's public GraphQL API.
+The service **does not implement a local code index**. All code search goes through Sourcegraph's public GraphQL API.
 
 ---
 
-## Prerequisites
+## Dependencies (external services)
 
-| Dependency | Required For | Default Port |
-|-----------|-------------|:---:|
-| PostgreSQL | Firecrawl job storage | 5432 |
-| Redis | Firecrawl caching | 6379 |
-| Node.js v24+ | Firecrawl server runtime | — |
-| pnpm | Firecrawl dependency install | — |
-| Rust 1.92+ | Building the service | — |
-| psql | Bootstrap DB creation | (PATH) |
-| git | Bootstrap: clone Firecrawl repo | — |
-| NSSM | Windows service installation (optional) | — |
+| Service | Port | Role | Managed by |
+|---------|:---:|------|------------|
+| crw-server | 3000 | Scraper: search + scrape via Playwright CDP | NSSM |
+| SearXNG | 3434 | Meta-search engine → Google, Bing, Wikipedia | NSSM |
+| rsedis | 6379 | Redis-compatible cache for SearXNG | NSSM |
+| chromium-debug | 9222 | Chromium CDP for browser-based scraping | NSSM |
+| websurfx | 3008 | User-facing web search UI (optional) | NSSM |
+
+### Build prerequisites
+
+| Dependency | Required For |
+|-----------|-------------|
+| Rust 1.92+ | Building the universal-search binary |
+| Python 3.11+ | SearXNG runtime (if running locally) |
+| NSSM | Windows service management |
 
 ---
 
@@ -182,67 +152,39 @@ The service **does not implement a local code index** (Tantivy on port 3004 is a
 ### Build
 
 ```powershell
-pwsh universal_search/build.ps1
+cd universal_search
+cargo build --release
 ```
 
-Produces `dist/universal-search/` containing:
-- `universal-search-service.exe` — the binary
-- `config.jsonc` — your active config (copied from `universal_search/config.jsonc`)
-- `run.bat` — foreground run script
-- `install.bat` — Windows service installer
-- `AGENT_GUIDE.md` — agent usage guide
+Binary at `target/release/universal-search-service.exe` (9.7 MB).
 
 ### First-time config
 
 ```batch
 copy universal_search\config.jsonc.template universal_search\config.jsonc
 notepad universal_search\config.jsonc
-:: Fill in credentials, then run build.ps1
+:: Fill in agent credentials (Anthropic API key + base URL)
 ```
 
 ### Run
 
 ```batch
-cd dist\universal-search
-.\run.bat
+.\target\release\universal-search-service.exe run
 ```
 
-### Install as Windows Service
+Or as NSSM service (recommended):
 
 ```batch
-cd dist\universal-search
-.\install.bat
+nssm install universal-search .\target\release\universal-search-service.exe
+nssm set universal-search AppDirectory .\target\release
+nssm start universal-search
 ```
 
-### Default Ports
+### All services (NSSM)
 
-| Service | Port | Purpose |
-|---------|:---:|---------|
-| universal_search | 3005 | HTTP API for all endpoints |
-| Firecrawl | 3002 | Web scraping and extraction |
-
----
-
-## Bootstrap (Auto-setup)
-
-On startup with `source: "local"`, the service runs a bootstrap sequence:
-
-1. **Check PostgreSQL** — TCP port 5432 must be reachable
-2. **Ensure Firecrawl database** — If the `firecrawl` database doesn't exist in PostgreSQL, creates it via `psql` using configured credentials. Searches common psql install paths and falls back to PATH.
-3. **Check Redis** — TCP port 6379 must be reachable
-4. **Clone Firecrawl** — If `bootstrap.auto_clone_firecrawl: true` and the repo is missing, runs `git clone --depth=1 https://github.com/firecrawl/firecrawl.git`
-5. **Install deps** — If `bootstrap.auto_install_deps: true`, runs `pnpm install` in `firecrawl/apps/api`
-6. **Start Firecrawl** — If `firecrawl.auto_start: true`, launches Firecrawl (detached, `USE_GO_MARKDOWN_PARSER=false`)
-
-### Database Auto-Creation
-
-If PostgreSQL is reachable but the `firecrawl` database is missing, the service finds `psql` and runs:
-
-```sql
-CREATE DATABASE "firecrawl";
+```batch
+sc.exe query crw-server searxng rsedis chromium-debug universal-search
 ```
-
-This uses the credentials from `web_search.firecrawl.postgres` in config.
 
 ---
 
@@ -298,17 +240,18 @@ Commands:
 
 | Method | Endpoint | Backend |
 |--------|----------|---------|
-| `POST` | `/web/search` | Firecrawl `/v1/search` |
-| `POST` | `/web/context` | Firecrawl `/v1/scrape` |
+| `POST` | `/web/search` | crw-server `/v1/search` → SearXNG → Google |
+| `POST` | `/web/context` | crw-server `/v1/scrape` → Playwright CDP |
 | `POST` | `/web/sourcegraph` | Sourcegraph GraphQL API |
-| `POST` | `/web/fetch` | Direct HTTPS fetch (no Firecrawl) |
-| `POST` | `/hybrid` | Sourcegraph + Firecrawl (merged) |
+| `POST` | `/web/fetch` | Direct HTTPS fetch |
+| `POST` | `/web/browser` | Playwright browser fetch |
+| `POST` | `/hybrid` | Sourcegraph + Web (merged) |
 
 ---
 
 ## Configuration
 
-Config file: `universal_search/config.jsonc` (edit here), copied by `build.ps1` to `dist/universal-search/config.jsonc` (read by binary).
+Config file: `config.jsonc` next to the binary (or set `UNIVERSAL_SEARCH_CONFIG` env var).
 
 ```jsonc
 {
@@ -316,48 +259,22 @@ Config file: `universal_search/config.jsonc` (edit here), copied by `build.ps1` 
   "agent": {
     "enabled": true,
     "model": "claude-sonnet-4-20250514",
+    "max_turns": 5,
+    "prompt_caching": true,
     "anthropic_api_key": "your-api-key",
-    "anthropic_base_url": "https://your-proxy/v1"
+    "anthropic_base_url": "https://your-proxy"
   },
   "web_search": {
     "firecrawl": {
-      "api_url": "http://localhost:3002",
-      "source": "local",
-      "auto_start": false,
-      "postgres": {
-        "host": "localhost", "port": 5432,
-        "username": "postgres", "password": "your-password",
-        "database": "firecrawl"
-      },
-      "redis": { "host": "localhost", "port": 6379 }
+      "api_url": "http://localhost:3000",
+      "source": "crw-server"
     },
     "sourcegraph": {
       "api_url": "https://sourcegraph.com/.api/graphql",
       "access_token": null
     }
-  },
-  "bootstrap": {
-    "auto_clone_firecrawl": false,
-    "auto_install_deps": false
   }
 }
-```
-
----
-
-## Service Management (Windows / NSSM)
-
-```batch
-:: Install (from dist/universal-search/)
-.\install.bat
-
-:: Control
-nssm start universal-search
-nssm stop universal-search
-nssm status universal-search
-
-:: Remove
-nssm remove universal-search confirm
 ```
 
 ---
@@ -365,32 +282,31 @@ nssm remove universal-search confirm
 ## Testing
 
 ```bash
-# Rust unit tests (mockito)
-cargo test -p universal-search-service
+# Rust unit tests
+cd universal_search && cargo test
+# => 29 passed (1 pre-existing ring_log skip)
 
-# Python integration tests
-cd universal_search/tests
-pytest test_integration.py -v
-
-# Smoke test
-pwsh universal_search/test.ps1
+# Integration tests (mockito)
+cargo test --test test_web_search --test test_sourcegraph
+# => 11 passed
 ```
 
 ---
 
 ## Troubleshooting
 
+### Web search returns empty results
+Ensure crw-server and SearXNG are running:
+```powershell
+sc.exe query crw-server searxng
+curl http://127.0.0.1:3000/v1/search -X POST -H "Content-Type: application/json" -d '{"query":"test","limit":2}'
+curl "http://127.0.0.1:3434/search?q=test&format=json"
+```
+
 ### Port already in use
 ```powershell
 netstat -ano | findstr :3005
 taskkill /PID <PID> /F
-```
-
-### Firecrawl connection refused
-Ensure Firecrawl is running:
-```bash
-curl http://localhost:3002/
-# => {"message":"Firecrawl API","documentation_url":"https://docs.firecrawl.dev"}
 ```
 
 ### Agent returns "Rate limited"
@@ -399,21 +315,22 @@ Wait `rate_limit_seconds` between requests, or increase in config.
 ### Agent job stuck in "processing"
 Check Claude API is reachable. Jobs auto-expire after `job_ttl_seconds`.
 
-### Bootstrap warnings
-```bash
-.\dist\universal-search\universal-search-service.exe diag
+### SearXNG not starting
+Check Python 3.11+ available, deps installed, settings.yml at correct path.
+```powershell
+python -m searx.webapp  # test foreground
 ```
-Common causes: PostgreSQL/Redis not running, `psql` not in PATH, `git`/`pnpm` missing.
 
 ---
 
 ## References
 
-- [Firecrawl Docs](https://docs.firecrawl.dev)
+- [SearXNG Documentation](https://docs.searxng.org/)
 - [Sourcegraph API](https://docs.sourcegraph.com/api)
 - [Anthropic Messages API](https://docs.anthropic.com/en/api/messages)
+- [Anthropic Prompt Caching](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching)
 - [IronClaw web-search extension](docs/extensions/web-search.md)
 
 ---
 
-> **Last verified:** 2026-05-19 — build passes, DB auto-creation tested, config default fix verified.
+> **Last verified:** 2026-06-14 — SearXNG + crw-server pipeline, agent prompt caching, all 6 NSSM services healthy, universalsearch tool returns live results.

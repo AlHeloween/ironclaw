@@ -1,108 +1,141 @@
 ---
 name: rag
-description: Index/query local repositories using adm RAG (adm.json + sqlite) and a local BAAI/bge-m3 embedder.
+description: Index/query local repositories using adm RAG (adm.json + sqlite) with BGE embedder, dual-quaternion ranking, fd file discovery, and MCP HTTP daemon.
 ---
 
 # rag (adm RAG)
 
-This skill covers the `adm --rag ...` and `adm --query ...` commands.
+This skill covers `adm --query ...`, `adm --rag ...`, `adm-rag --init`, `adm-rag --mcp-http`, and `adm-rag --rag-status`.
+
+## Quick Start (first-time users)
+
+```bash
+# 1. Install deps, then check environment
+pip install torch sentence-transformers
+adm-rag --init
+
+# 2. Index the project (fd respects .gitignore, SHA-256 incremental)
+adm --rag index my_project .
+
+# 3. Start the model daemon (optional, for sub-second queries)
+adm-rag --mcp-http 127.0.0.1 7990 &
+
+# 4. Query instantly (auto-forwards to MCP server if running)
+adm --query my_project "how does the DQ signature work?"
+```
 
 ## Requirements
 
-- `adm.json` must exist in the launch folder (adm auto-creates it with defaults if missing).
-- The local embedder must be loadable from `rag.embed.*` settings.
-- Default embedder: `sentence_transformers` + `BAAI/bge-m3`.
-- **External Python Runtime:** `adm-rag.exe` is a small Nuitka helper that attaches `site-packages` from a compatible Python 3.13 installation found on PATH, or from `ADID_RAG_PYTHON`.
-- **PyTorch Runtime Detection:** the helper does not bundle the heavy ML stack. You must install the RAG packages into that Python separately:
-  - CPU: `python -m pip install torch sentence-transformers`
-  - CUDA: `python -m pip install torch sentence-transformers --index-url https://download.pytorch.org/whl/cu121`
-- At indexing start, the system displays external runtime source, detected packages, and CPU/GPU execution choice:
-  ~~~
-  [RAG] Embeddings backend=sentence_transformers model=BAAI/bge-m3
-  [RAG] Requested device: auto
-  [RAG] External Python: C:\Python313\python.exe (version=3.13.2, source=python)
-  [RAG] Package torch: 2.7.0+cu128 [required]
-  [RAG] Package sentence-transformers: 5.3.0 [required]
-  [RAG] PyTorch 2.7.0+cu128 detected
-  [RAG] CUDA available: Yes
-  [RAG]   Device: NVIDIA GeForce RTX 4090
-  [RAG] Execution device: GPU (cuda:0)
-  ~~~
+- `adm.json` must exist in the launch folder (auto-created with defaults if missing).
+- **Python 3.13** with `torch` and `sentence-transformers` installed:
+  ```bash
+  pip install torch --index-url https://download.pytorch.org/whl/cu124
+  pip install sentence-transformers
+  ```
+- `adm-rag --init` checks whether deps are present and advises if missing (detection only, never installs).
+- `adm-rag --rag-status` prints the full environment status.
+- Default embedder: `BAAI/bge-base-en-v1.5` (768D) via `sentence_transformers`.
+- **`fd`** is bundled in `tools/` and used for gitignore-aware file discovery.
+- If running from the frozen `adm-rag.exe` without torch, the binary auto-delegates to the system `adm` (pip-installed) via `ADID_RAG_DELEGATE`.
 
 ## Commands
 
-- Show settings: `tools/adm.exe --rag settings`
-- List indexes: `tools/adm.exe --rag list`
-- Index: `tools/adm.exe --rag index <index_name> <root1> [root2 ...]`
-- Show indexed docs: `tools/adm.exe --rag docs <index_name> [limit]`
-- Status: `tools/adm.exe --rag status <index_name>`
-- Delete: `tools/adm.exe --rag delete <index_name>`
-- Query: `tools/adm.exe --query <index_name> <request...>`
-- Direct helper equivalents: replace `tools/adm.exe` with `tools/adm-rag.exe` when you want the explicit RAG/MCP binary
+| Command | Purpose |
+|---|---|
+| `adm-rag --init` | Check environment, advise on missing deps |
+| `adm-rag --rag-status` | Show full environment status |
+| `adm --rag index <name> [roots]` | Create/update index (fd + SHA-256 incremental) |
+| `adm --rag status <name>` | Show index docs/chunks count |
+| `adm --rag docs <name> [limit]` | List recently indexed documents |
+| `adm --rag delete <name>` | Remove index |
+| `adm --rag list` | List all indexes |
+| `adm --query <name> "<text>"` | Semantic search (auto-forwarded to MCP) |
+| `adm --mcp-http [host] [port]` | Start model daemon (one per machine, shared) |
 
-Defaults:
-- `tools/adm.exe --rag index` => `index_name=<current folder name>`, `roots=['.']`
-- `tools/adm.exe --rag delete` => `index_name=<current folder name>`
+Both `adm` and `adm-rag` accept the same commands. The `adm` binary forwards RAG commands to `tools/adm-rag.exe`.
 
-Bundled binary split note:
-- `adm.exe` is the small front-end binary.
-- `adm-rag.exe` contains the local embedding and MCP runtime.
-- In installed/bundled layouts, `tools/adm.exe --rag ...` and `tools/adm.exe --query ...` forward to `tools/adm-rag.exe`.
+## File Discovery and Exclusion
 
-Index runs now print live progress:
-- initial `[RAG] indexing ...` banner,
-- `[RAG][PROGRESS] stage=... processed=... indexed_docs=... skipped_docs=... error_docs=... indexed_chunks=... queued_chunks=...` (plus `file_chunks=...` on per-record indexing events),
-- final `[RAG] index='...' docs=... chunks=...` summary.
+- **`fd`** (bundled in `tools/fd.exe`) walks the file tree, respecting `.gitignore` natively.
+- Extensions from `include_globs` are passed to `fd --extension` for efficient filtering.
+- `exclude_globs` (e.g. `**/dist/**`, `**/build/**`) provide additional application-level exclusion.
+- `exclude_patterns` and `add_patterns` allow per-file overrides.
+- Fallback: `os.walk` when `fd` is unavailable.
+
+## Forwarding Architecture
+
+```
+adm --rag index .
+  │
+  ├─ frozen (PyInstaller exe)?
+  │   YES → _find_rag_helper → tools/adm-rag.exe (sibling, tools/, or PATH)
+  │   NO  → handle internally (pip-installed mode, torch available)
+  │
+adm-rag.exe
+  ├─ frozen without torch?
+  │   YES → _delegate_to_system_python → find adm on PATH → subprocess
+  │         (ADID_RAG_DELEGATE=1 prevents re-forwarding loop)
+  │   NO  → normal operation
+  │
+  └─ Pro tip: `adm-rag --query` auto-detects MCP HTTP on 127.0.0.1:7990
+     and forwards instantly for sub-second queries.
+```
+
+## MCP HTTP Daemon (shared model)
+
+One MCP server serves all projects on the machine:
+
+```bash
+# Terminal 1: start once
+adm-rag --mcp-http 127.0.0.1 7990
+# → loads BGE model once, stays in memory
+
+# Terminal 2+: instant queries (0.05s)
+adm --query projA "search..."
+```
+
+Each tool call carries `config_path` — the server reads the correct `adm.json` per project.
 
 ## What gets indexed
 
-- Native text/code/web files from `rag.include_globs`
-- Force-included paths from `rag.add_patterns`
-- Hard excludes from `rag.exclude_patterns`
-- Structured ADID history docs (`adid://update/...`, `adid://trace/...`, `adid://ledger/...`)
-- Structured `cmd_runner` run docs (`log://cmd_runner/<run_id>#summary|stdout|stderr|inbox`) when `rag.cmd_runner_logs_enabled=true`
+- Files matching `include_globs` (discovered by `fd` respecting `.gitignore`)
+- Force-included paths from `add_patterns`
+- Excluded by `exclude_globs`, `exclude_patterns`, and `.gitignore` (via `fd`)
+- Structured ADID history docs (`adid://update/...`, `adid://trace/...`)
 
-Code chunks also carry:
-- Tree-sitter structural tags: `symbol_kind:*`, `symbol_name:*`
-- (Astgrep tags were removed from indexing for performance; `astgrep_tags_enabled` config flag is ignored)
-
-Use `tools/adm.exe --rag settings` to inspect the effective `include_globs`, `add_patterns`, `exclude_globs`, `exclude_patterns`, and `cmd_runner_logs_enabled` values.
+Code chunks carry tree-sitter structural tags: `symbol_kind:*`, `symbol_name:*`.
 
 ## Embedding + retrieval model
 
-- Default embedder:
-  - `rag.embed.backend = sentence_transformers`
-  - `rag.embed.model = BAAI/bge-m3`
-  - `rag.embed.device = auto`
-  - `rag.embed.batch_size = 16`
-- Hybrid retrieval:
-  - full-vector similarity
-  - SQLite FTS5
-  - dual-quaternion signature shortlist/rerank using the same low-frequency packing style as `docs/dual-quaternion-truth-2.py`
-- Suggested mental model:
-  - embeddings + DQ = fast semantic/structural shortlist
-  - ADID = time-resolved and semantically grounded reasoning over the shortlist
-  - use DQ agreement as a structure-consistency signal before deep analysis
-- Key tuning knobs:
-  - `rag.vector_top_k`, `rag.fts_top_k`, `rag.dq_top_k`
-  - `rag.weight_vector`, `rag.weight_fts`, `rag.weight_dq`
-  - `rag.dq_projection_dim`, `rag.dq_keep_rows`, `rag.dq_keep_cols`, `rag.dq_include_energy`
+- Default: `sentence_transformers` + `BAAI/bge-base-en-v1.5` (768D), batch size 32, normalize on.
+- Hybrid RRF: full-vector cosine + dual-quaternion structural signature + SQLite FTS5.
+- SE(3) projection head (optional, trainable via `se3_trainer.py`).
+- Incremental indexing: SHA-256 content hash per file; unchanged files skipped, changed files atomically replaced.
+- Key tunables: `rag.vector_top_k`, `rag.dq_top_k`, `rag.weight_vector`, `rag.weight_dq`, `rag.rrf_k`, `rag.dq_*`.
 
-## Common queries (smoke)
+## Defaults
 
-After indexing docs, these are good “first queries” to validate wiring:
+- Index DB: `.adid_rag/data/<name>.sqlite3`
+- Gitignored folders: `.adid_rag/`, `.rag_env/`
+- If `adm-rag --rag index` is run without explicit `index_name`, the current directory name is used.
+- If `adm-rag --rag delete` is run without explicit `index_name`, the current directory name is used.
 
-- `tools/adm.exe --query <index_name> "ADIDInstaller.json"`
-- `tools/adm.exe --query <index_name> "codex mcp add adid_rag"`
-- `tools/adm.exe --query <index_name> "log://cmd_runner"`
-- `tools/adm.exe --query <index_name> "symbol_name:Greeter"`
+## Architecture
 
-## Windows-specific
+```
+┌────────────┐     HTTP:7990     ┌──────────────────┐
+│  adm-rag   │ ───tools/call───→ │  MCP HTTP server  │
+│  --query   │ ←─  JSON-RPC ─── │  (model loaded)   │
+└────────────┘                   │  config_path per  │
+                                 │  call → multi-DB  │
+┌────────────┐                   └──────────────────┘
+│  Project A  │── .rag_env/ + adm.json + .adid_rag/data/A.sqlite3
+│  Project B  │── .rag_env/ + adm.json + .adid_rag/data/B.sqlite3
+└────────────┘
+```
 
-- Set repo-local cache/temp at start of work:
-  - cmd.exe: `call scripts\\dev_env_windows.cmd`
-  - PowerShell: `. .\\scripts\\dev_env_windows.ps1`
+## Common smoke queries
 
-## Linux-specific
-
-- For service deployments, prefer MCP HTTP mode (`adm --mcp-http`) with a systemd unit whose `WorkingDirectory` is the folder that contains `adm.json`.
+- `adm --query <name> "configuration file location"`
+- `adm --query <name> "how does dual quaternion signature work"`
+- `adm --query <name> "symbol_name:dual_quaternion_signature_8d"`

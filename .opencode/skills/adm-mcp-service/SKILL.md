@@ -25,12 +25,13 @@ Bundled binary split note:
 Codex can launch `adm` as a stdio MCP server and call the RAG tools through it.
 
 - Add server (writes to `~/.codex/config.toml`):
-  - `codex mcp add adid_rag --cwd <repo_root> -- <abs_path_to_adm_rag.exe> --mcp`
-- Example (Windows):
-  - `codex mcp add adid_rag --cwd D:\\zPython\\ADID_Python -- D:\\zPython\\ADID_Python\\tools\\adm-rag.exe --mcp`
+  - `codex mcp add project_rag --cwd <real_project_root> -- <real_project_root>\\tools\\adm-rag.exe --mcp`
+- Concrete documentation fixture:
+  - `artefacts/examples/project-agnostic/README.md`
+  - Replace `artefacts/examples/project-agnostic` with the real project root before running MCP commands.
 - Verify:
   - `codex mcp list`
-  - `codex mcp get adid_rag`
+  - `codex mcp get project_rag`
 
 ## Windows (service)
 

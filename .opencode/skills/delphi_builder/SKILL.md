@@ -1,6 +1,6 @@
 ---
 name: delphi_builder
-description: Build Delphi (VCL/FMX) projects from the command line with MSBuild, including environment initialization (MSVC + rsvars) and packaging notes for ADIDInstaller.
+description: Build Delphi (VCL/FMX) projects from the command line with MSBuild, including environment initialization (MSVC + rsvars).
 ---
 
 # delphi_builder
@@ -78,17 +78,17 @@ Then calls `rsvars.bat` (32-bit) or `rsvars64.bat` (64-bit) which sets `BDS`, `P
 2. Invokes `msbuild /t:Build /p:Platform=<Win32|Win64> /p:Config=<Release|Debug> <project>.dproj`
 3. Output goes to `<project_dir>/bin/<Platform>/<Config>/<project>.exe`
 
-### How the release pipeline invokes it
+### How automation invokes it
 
-The full release flow (`_release.cmd` → `scripts/release.py`) chains these for `cmd_runner.exe`:
+Project automation commonly chains the same three setup/build steps for a concrete `.dpr` target:
 
 ```
 call tools\init_msvc.cmd
 call tools\init_delphi.cmd Win64
-call tools\build_delphi_msbuild.cmd delphi\cmd_runner.dpr Win64 Release
+call tools\build_delphi_msbuild.cmd artefacts\examples\project-agnostic\delphi\ProjectTool.dpr Win64 Release
 ```
 
-This is the same three-step pattern — just with the project path pointing at `delphi\cmd_runner.dpr`.
+This fixture path is for documentation. Replace it with the real project's `.dpr` path before running the command.
 
 ## Typical build flow (Windows)
 
@@ -100,13 +100,12 @@ This is the same three-step pattern — just with the project path pointing at `
    - PowerShell (dot-source): `. .\\tools\\init_delphi.ps1 -Platform Win64`
 3. Build:
    - Prefer wrapper (auto-generates `.dproj` from `.dpr` when missing):
-     - `tools\\build_delphi_msbuild.cmd delphi\\cmd_runner.dpr Win32 Release`
-     - `tools\\build_delphi_msbuild.cmd delphi\\cmd_runner.dpr Win64 Release`
+     - `tools\\build_delphi_msbuild.cmd artefacts\\examples\\project-agnostic\\delphi\\ProjectTool.dpr Win32 Release`
+     - `tools\\build_delphi_msbuild.cmd artefacts\\examples\\project-agnostic\\delphi\\ProjectTool.dpr Win64 Release`
    - PowerShell wrapper:
-     - `.\\tools\\build_delphi_msbuild.ps1 -Dpr delphi\\cmd_runner.dpr -Platform Win64 -Config Release`
+     - `.\\tools\\build_delphi_msbuild.ps1 -Dpr artefacts\\examples\\project-agnostic\\delphi\\ProjectTool.dpr -Platform Win64 -Config Release`
 
-Repo shortcut (FMX installer, Win64 Release):
-- `delphi\\build_installer_msbuild.cmd Win64 Release`
+Project-specific shortcuts may wrap these commands; inspect local scripts before using them.
 
 Notes:
 - Delphi 2009+ commonly uses `/p:config=<ConfigName>` (case-insensitive).
@@ -126,7 +125,7 @@ Prefer build-time configuration (project/group build props) instead of editing g
   - `set ADID_DELPHI_PROFILE=my_wsl_profile`
   - `tools\\build_delphi_msbuild.cmd path\\to\\YourFMXApp.dpr Linux64 Release`
 
-Details: `docs\\delphi_linux_wsl2.md`
+For details, use the project's Delphi Linux/WSL2 build notes when present.
 
 ## FMX cross-platform builds (concept)
 

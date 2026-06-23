@@ -1,6 +1,6 @@
 ---
 name: dunit
-description: Run and maintain Delphi DUnit tests for the ADID installer and related Delphi units.
+description: Run and maintain Delphi DUnit tests for Delphi projects.
 ---
 
 # dunit
@@ -16,28 +16,28 @@ Provide a reliable workflow for building and running Delphi DUnit tests (console
   - `call tools\init_msvc.cmd` (optional)
   - `call tools\init_delphi.cmd Win32`
 
-## Commands (repo)
+## Commands
 
 - Build + run all DUnit tests:
-  - `delphi\tests\run_tests.cmd`
+  - `tests\run_tests.cmd`
 
 - Build tests only:
-  - `delphi\tests\build_tests.cmd`
+  - `tests\build_tests.cmd`
 
 ## Notes (Win64)
 
-- The repo test scripts build the test runner via MSBuild for `Win64` (see `delphi\tests\build_tests.cmd`).
+- Project test scripts commonly build the test runner via MSBuild for `Win64`; inspect the local test script before assuming platform/configuration.
 
-## Project layout (this repo)
+## Typical project layout
 
-- Test project: `delphi\tests\ADIDInstallerTests.dpr`
-- Test units: `delphi\tests\TestInstallerCore.pas`, `delphi\tests\TestInstallerOps.pas`
+- Test project: `artefacts\examples\project-agnostic\tests\ProjectTests.dpr`
+- Test units: `artefacts\examples\project-agnostic\tests\TestCore.pas`, `artefacts\examples\project-agnostic\tests\TestServices.pas`
 
 ## How to add a new test
 
-1. Add a new unit `delphi\tests\TestSomething.pas`.
-2. Register it in `delphi\tests\ADIDInstallerTests.dpr` (typical DUnit pattern).
-3. Re-run `delphi\tests\run_tests.cmd`.
+1. Add a new unit such as `tests\TestSomething.pas`.
+2. Register it in the local DUnit project file. See `artefacts\examples\project-agnostic\tests\ProjectTests.dpr` for the documentation fixture.
+3. Re-run the local DUnit test command.
 
 ## Notes
 

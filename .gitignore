@@ -52,3 +52,4 @@ engine_trace_*.json
 
 logs/
 .opencode/data/
+/universal_search/sourcegraph

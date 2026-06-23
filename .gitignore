@@ -52,4 +52,13 @@ engine_trace_*.json
 
 logs/
 .opencode/data/
-/universal_search/sourcegraph
+universal_search/firecrawl
+universal_search/sourcegraph
+
+# Local test artifacts
+.anvil/
+.codegraph/
+.opencode/
+
+
+

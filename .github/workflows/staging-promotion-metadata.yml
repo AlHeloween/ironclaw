@@ -16,7 +16,7 @@ on:
     types: [opened, synchronize, reopened]
   push:
     branches:
-      - main
+      - local_development
 
 permissions:
   contents: read
@@ -38,7 +38,7 @@ jobs:
         with:
           # For chained promotion PRs, the script lives on the trusted PR head,
           # not necessarily on the older promotion branch used as the PR base.
-          ref: ${{ github.event_name == 'workflow_dispatch' && 'main' || github.event.pull_request.head.sha }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'local_development' || github.event.pull_request.head.sha }}
           fetch-depth: 0
           fetch-tags: true
           persist-credentials: false
@@ -51,17 +51,17 @@ jobs:
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
         run: bash .github/scripts/update-staging-promotion-body.sh
 
-  refresh-open-prs-after-main-push:
+  refresh-open-prs-after-local-development-push:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
     steps:
-      - name: Checkout main
+      - name: Checkout local_development
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: main
+          ref: local_development
           fetch-depth: 0
           fetch-tags: true
           persist-credentials: false

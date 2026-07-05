@@ -36,7 +36,7 @@ jobs:
         id: resolve
         env:
           GH_TOKEN: ${{ github.token }}
-          FALLBACK_BRANCH: main
+          FALLBACK_BRANCH: local_development
           REPO: ${{ github.repository }}
         run: |
           LATEST=$(gh pr list --repo "${REPO}" --label staging-promotion --state open \
@@ -454,8 +454,8 @@ jobs:
             echo "passed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # Only merge PRs targeting main. Chained PRs (targeting another
-      # promotion branch) stay open — when the base PR merges into main,
+      # Only merge PRs targeting local_development. Chained PRs (targeting another
+      # promotion branch) stay open — when the base PR merges into local_development,
       # GitHub auto-retargets the chained PR. Merging chained PRs would
       # trigger delete_branch_on_merge, auto-closing downstream PRs.
       - name: Merge promotion PR
@@ -468,8 +468,8 @@ jobs:
           source .github/scripts/pr-body-utils.sh
           if [ -n "$PR_NUMBER" ]; then
             BASE=$(gh pr view "$PR_NUMBER" --json baseRefName --jq '.baseRefName')
-            if [ "$BASE" = "main" ]; then
-              echo "Merging promotion PR #${PR_NUMBER} (targets main)"
+            if [ "$BASE" = "local_development" ]; then
+              echo "Merging promotion PR #${PR_NUMBER} (targets local_development)"
               TITLE=$(gh pr view "$PR_NUMBER" --json title --jq '.title')
               HEAD_BRANCH=$(gh pr view "$PR_NUMBER" --json headRefName --jq '.headRefName')
               git fetch origin "${BASE}" "${HEAD_BRANCH}"
@@ -490,7 +490,7 @@ jobs:
               gh pr merge "$PR_NUMBER" --merge --subject "#${PR_NUMBER} $TITLE" --body-file /tmp/staging-promotion-merge-body.md
               echo "merged=true" >> "$GITHUB_OUTPUT"
             else
-              echo "PR #${PR_NUMBER} targets '${BASE}' (not main) — leaving open for chain resolution"
+              echo "PR #${PR_NUMBER} targets '${BASE}' (not local_development) — leaving open for chain resolution"
               echo "merged=false" >> "$GITHUB_OUTPUT"
             fi
           fi

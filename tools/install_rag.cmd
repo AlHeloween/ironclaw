@@ -51,13 +51,23 @@ if !errorlevel! equ 0 (
 
 REM Install / upgrade ADID
 echo.
-echo  Installing ADID RAG 5.0.6...
-REM Find the wheel relative to this script
+echo  Installing ADID RAG...
+REM Find the wheel — search multiple locations (version-agnostic)
 set "SCRIPT_DIR=%~dp0"
-set "WHEEL_DIR=%SCRIPT_DIR%..\dist"
-if exist "%WHEEL_DIR%\adm-5.0.6-py3-none-any.whl" (
-    echo  Installing from wheel: %WHEEL_DIR%\adm-5.0.6-py3-none-any.whl
-    pip install --upgrade "%WHEEL_DIR%\adm-5.0.6-py3-none-any.whl[rag]"
+set "WHEEL_PATH="
+REM Check bundle root (same dir as this script)
+for %%F in ("%SCRIPT_DIR%adm-*.whl") do if not defined WHEEL_PATH set "WHEEL_PATH=%%~F"
+REM Check parent dir (project root — installer copies wheel here)
+if not defined WHEEL_PATH (
+    for %%F in ("%SCRIPT_DIR%..\adm-*.whl") do if not defined WHEEL_PATH set "WHEEL_PATH=%%~F"
+)
+REM Legacy fallback: ../dist/
+if not defined WHEEL_PATH (
+    for %%F in ("%SCRIPT_DIR%..\dist\adm-*.whl") do if not defined WHEEL_PATH set "WHEEL_PATH=%%~F"
+)
+if defined WHEEL_PATH (
+    echo  Installing from wheel: %WHEEL_PATH%
+    pip install --upgrade "%WHEEL_PATH%[rag]"
 ) else (
     echo  Wheel not found, installing from PyPI...
     pip install --upgrade "adm[rag]>5.0"

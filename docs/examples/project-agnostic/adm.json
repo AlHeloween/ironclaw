@@ -1,0 +1,9 @@
+{
+  "rag": {
+    "embed": {
+      "backend": "sentence_transformers",
+      "model": "BAAI/bge-base-en-v1.5"
+    }
+  }
+}
+

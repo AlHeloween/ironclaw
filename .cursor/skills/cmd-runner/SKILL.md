@@ -1,144 +1,261 @@
 ---
 name: cmd-runner
-description: Run interactive Windows commands safely via cmd_runner (ConPTY-only) with per-run logs and an inbox bridge.
+description: Run interactive commands safely via cmd_runner with per-run logs, inbox bridge, terminal auto-detection, and image capture support.
+kernel-gates: [G7, G8]
 ---
 
 # cmd-runner
 
+**Kernel gates:** G7 (execute bounded implementation steps), G8 (run oracle instruments — tests, builds, probes) — see reasoning-kernel.mdc.
+
 Use this skill when a command may be:
 - long/noisy,
 - interactive (prompts, TUIs),
-- crash-prone or likely to destabilize the agent when run directly.
+- crash-prone or likely to destabilize the agent when run directly,
+- render terminal graphics (Kitty/iTerm2/Sixel protocols).
 
 ## When to use cmd_runner
 
 **Use cmd_runner for:**
 - Long-running builds: `cargo build --release`, `msbuild`, `make`, `gradle build`
-- Package installs: `npm install`, `python -m pip install -r requirements.txt`, `cargo fetch`, ecosystem-specific dependency setup
+- Package installs: `npm install`, `pip install -r requirements.txt`, `cargo fetch`
 - Test suites: `pytest`, `cargo test`, `npm test`, `mvn test`
 - Interactive TUIs: `htop`, `ncurses` apps, installers with prompts
+- Image-rendering commands: `chafa`, `timg`, any Kitty/Sixel protocol output
 - Crash-prone or unstable commands
 - Commands that produce thousands of lines of output
 
 **Do NOT use cmd_runner for:**
-- Quick checks: `ls`, `dir`, `git status`, `echo`, `cat`
-- Simple file operations: `cp`, `mv`, `rm` (for small operations)
+- Quick checks: `list`, `glob`, `git status`, `echo`, `cat` (use product tools, not shell)
+- Simple file operations: `cp`, `mv`, `rm`
 - Commands that complete in <1 second
 - Commands you need to see output from immediately
 
-## Why use cmd_runner?
-
-1. **Prevents context flooding** — Long output doesn't consume your agent context window
-2. **Isolates crashes** — If the subprocess crashes, your agent session stays stable
-3. **Visible window control** — Subprocess opens in a minimized window (SW_SHOWMINNOACTIVE); you can always find it in the taskbar and close it if needed
-4. **Cross-shell safety** — Paths are normalized to survive bash → cmd → PowerShell → Python transformations
-5. **Programmatic input** — Send keystrokes/text via the inbox bridge without terminal hacks
-
 ## Process window behavior
 
-All subprocesses created by cmd_runner open with `SW_SHOWMINNOACTIVE`:
-- Window is minimized (not visible on screen initially)
-- Window appears in the taskbar
-- Window is NOT activated (doesn't steal focus)
-- You can always find and close the window if the process hangs
-- This is safer than hidden/headless processes (which can't be interacted with)
+- All subprocesses open with `SW_SHOWMINNOACTIVE` (minimized, taskbar-visible, no focus steal).
+- Terminal selection via `--terminal` (see below).
+- Default terminal auto-detected by priority.
 
-## What cmd_runner is (current)
+## What cmd_runner is
 
-- Windows-only, ConPTY-only, serverless (no background server, no TCP control plane).
-- Root-only policy:
-  - Repo checkout: `cmd_runner.exe` at repo root (Delphi binary).
-  - Release bundle: run from the bundle root (cwd contains `cmd_runner.exe`).
-- Logs are written to: `logs/cmd_runner/<run_id>/`
-- Programmatic input bridge: append JSONL messages to `logs/cmd_runner/<run_id>/inbox.jsonl`.
+- Windows + Linux compatible.
+- Default backend uses ConPTY (Windows) or PTY (Linux) for terminal I/O.
+- `--direct-terminal` is a Windows Terminal-only graphics backend: the child inherits the actual WT console, so SIXEL capability negotiation and output are not consumed by ConPTY.
+- Raw pipe capture mode (`--raw`) for image protocol passthrough — converts Kitty/iTerm2/Sixel to `[IMG:PROTO:b64]` in logs.
+- Terminal auto-detection: conhost > wezterm > Windows Terminal > bash (Windows); wezterm > guake > yakuake > xterm > bash (Linux).
+- conhost is the Windows default because it reliably supports minimized-no-focus-steal (SW_SHOWMINNOACTIVE).
+  Windows Terminal (wt.exe) windows belong to WindowsTerminal.exe, not the launcher PID — use `--terminal wt` explicitly if needed.
+- Logs: `logs/cmd_runner/<run_id>/`
+- Programmatic input bridge: `logs/cmd_runner/<run_id>/inbox.jsonl`
+- Can be launched from any working directory (binary found via PATH or absolute path).
 
-## How to run it (recommended)
+## How to run it
 
-- Repo/dev:
-  - `.\cmd_runner.exe ...` (Delphi binary at repo root)
-- Release bundle:
-  - `cmd_runner.exe ...` (preferred; no project package manager required)
-- Via adm (integration; keeps a single progress-log cycle):
-  - `tools/adm.exe --cmd-runner <cmd_runner args...>`
-  - Example: `tools/adm.exe --cmd-runner start -- <command ...>`
+- Repo checkout: `.\cmd_runner.exe <command> ...`
+- Release bundle: `cmd_runner.exe <command> ...`
+- Via adm: `tools/adm.exe --cmd-runner <args...>`
+- From any directory: `cmd_runner <command> ...` (if on PATH)
+- Version: `cmd_runner --version` (prints build date)
 
 ## Core workflow
 
-1) Start an interactive run (spawns a new window; interactive session is hosted there):
-- `.\cmd_runner.exe start -- <command ...>`
-  - Prints `run_id` and `inbox=` path in the *current* terminal.
-  - Auto-tails last 5 lines after 500ms (default; use `--auto-tail 0` to disable).
-- `.\cmd_runner.exe start --shell cmd -- <command ...>`
-  - Explicitly wrap all args in a cmd.exe batch file.
-- `.\cmd_runner.exe start --shell pwsh -- <command ...>`
-  - Explicitly wrap all args in a PowerShell script.
-- `.\cmd_runner.exe start --shell bash -- <command ...>`
-  - Explicitly wrap all args in a bash/sh script (bash must be on PATH or use full path).
-  Without `--shell`, the tool auto-detects `cmd /c`, `powershell -c`, `python -c`, and `bash -c` from the command argv.
+### 1) Start a run
 
-2) Check status first (from the current terminal):
-- `.\cmd_runner.exe list`
-- `.\cmd_runner.exe status <run_id>`
-  - Use `status` first to confirm the program is still alive and did not crash before reading output.
+```
+cmd_runner start [--terminal HOST[=ARGS]] [--cols N --rows N] [--direct-terminal] [--raw|--no-raw] [--cwd PATH] -- <command ...>
+```
 
-3) Tail output (from the current terminal):
-- Repo checkout: `.\cmd_runner.exe tail <run_id>` (repo root)
-- Release bundle: `cmd_runner.exe tail <run_id>` (bundle root)
-  - Start with non-follow `tail` for a compact snapshot.
-  - Add `--follow` only when live streaming is needed.
-  - Use `--wait-ms N` to tail and keep following until the run finishes, checking for new output every N milliseconds.
-  - Prefer repeated `status`/non-follow `tail` checks over ad hoc shell sleeps; keep delay/wait handling inside the cmd_runner workflow.
+- Prints `run_id` and `inbox=` path.
+- Auto-tails last 5 lines after 500ms (default; `--auto-tail 0` to disable).
+- `--shell cmd|pwsh|bash` — explicit shell wrapper.
+- `--terminal` — select terminal host (see Terminal section below).
+- `--cols` / `--rows` — initial ConPTY grid; with the default `wt` launch they also become `wt --size COLS,ROWS`. Use a taller grid (for example, `80x60`) for portrait graphics rendered by `chafa`.
+- `--raw` — force raw pipes (no ConPTY, non-interactive batch commands only).
+- `--no-raw` — force ConPTY (interactive mode, default).
+- Default: ConPTY (interactive) — supports full send/inbox, TUI apps, interactive shells.
+- `--direct-terminal` — require `--terminal wt`; preserve SIXEL/terminal graphics and retain `status`, `stop`, job control, and inbox `send` while the payload runs. The direct WT window stays visible. Its stdout/stderr cannot be captured to runner logs by design.
 
-4) Inject input programmatically (bridge):
-- Append JSONL to: `logs/cmd_runner/<run_id>/inbox.jsonl`
-- Built-in (preferred):
-  - `.\cmd_runner.exe send <run_id> --keys "ctrl+c,ctrl+d,ENTER"`
-  - `.\cmd_runner.exe send <run_id> --hex 03` (raw byte: Ctrl+C)
-  - `.\cmd_runner.exe send <run_id> --text "whoami" --crlf` (text + CRLF)
-  - `.\cmd_runner.exe send <run_id> --text "whoami" --text-as-b64 --crlf` (b64-encode text before sending; original stored as `text_b64` in inbox + in.log)
-  - `.\cmd_runner.exe send <run_id> --stdin-file FILEPATH` (send file content)
-  - `.\cmd_runner.exe send <run_id> --text-file FILEPATH` (send file content as one message)
-  - **PowerShell quoting:** use single quotes for bash/python. The double-quote (`"`) triggers PowerShell cmdline escaping on Windows — replace it with `'` (single-quote) or `~` (for cmd.exe):
-    ```powershell
-    cmd_runner send <id> --crlf -- "python3 -c 'print(1+2)'"          # PS " outer, bash ' inner
-    cmd_runner send <id> --crlf -- 'bash -c '\''echo $HOME'\'''        # PS ' outer, bash ' inner (escaped)
-    cmd_runner send <id> --crlf -- 'echo ~~~hello~~~'                  # ~ instead of " for cmd.exe
-    ```
-    When `"` is unavoidable, use `--text-file` (reads file bytes, bypasses PS cmdline entirely).
-  - **Multi-line commands** via PowerShell here-string (uses `--` separator, newlines preserved):
-    ```powershell
-    cmd_runner send <id> --crlf -- @'
-    echo FIRST
-    echo SECOND
-    echo THIRD
-    '@
-    ```
-    All sends are atomic by default.
-  - `--keys` tokens: `LEFT`, `RIGHT`, `UP`, `DOWN`, `HOME`, `END`, `INSERT`, `DELETE`, `TAB`, `ESC`, `ENTER`, `BACKSPACE`, `ctrl+a`..`ctrl+z`, `ctrl+[`, `ctrl+\`, `TEXT:<text>`, `CHAR:<char>`, `HEX:<hex>`.
-  - Auto-tails last 3 lines after send (default; use `--send-tail 0` to disable).
+### Graphics in Windows Terminal
 
-5) Stop (serverless terminate):
-- `.\cmd_runner.exe stop <run_id> --reason "done"`
-  - Writes `logs/cmd_runner/<run_id>/stop_request.json`; the hosting cmd_runner watches for it and terminates the Job Object.
+Use the direct-terminal backend when `chafa` or another renderer chooses a symbol fallback under ConPTY:
 
-### Auto-tail options
+```
+cmd_runner start --terminal wt --direct-terminal --cols 80 --rows 60 --keep-open --cwd D:\zPython\ADID_Python\experiments\Vision -- .\dragon.bat
+cmd_runner status <run_id>
+cmd_runner send <run_id> --keys ENTER
+cmd_runner screenshot <run_id>
+cmd_runner screenshot <run_id> --out D:\captures\dragon.png
+```
 
-- `--auto-tail N`: After `start`, wait `--wait-ms` then show last N lines (default: 5, 0=off)
-- `--send-tail N`: After `send`, wait `--wait-ms` then show last N lines (default: 3, 0=off)
-- `--wait-ms N`: Delay before auto-tail in milliseconds (default: 500)
-- `--tail-mode text|stdout`: Output mode for auto-tail (default: text with line numbers)
+- The host enables `ENABLE_VIRTUAL_TERMINAL_PROCESSING` before it creates the child, then the child inherits the real WT console handles.
+- Screenshot identifies the visible WT tab by its per-run title. Do not minimize or close that window before capture.
+- Use `tail` for ConPTY/raw runs. Direct-terminal image output is intentionally terminal-only, not a log artifact.
 
-Auto-tail provides immediate feedback after starting a command or sending input, without needing explicit `tail` calls.
+### 2) Check status
 
-### SSH session example
+```
+cmd_runner list [--all] [--limit N] [--json]
+cmd_runner status <run_id> [--json]
+```
 
-- Start: `.\cmd_runner.exe start -- ssh root@host` (interactive, enter password manually)
-- Send command: `.\cmd_runner.exe send <run_id> --text "uptime; df -h" --crlf`
-- Interrupt (Ctrl+C): `.\cmd_runner.exe send <run_id> --keys ctrl+c`
-- End session (Ctrl+D): `.\cmd_runner.exe send <run_id> --keys ctrl+d`
+### 3) Tail output
 
-Notes:
-- `add_crlf` defaults to `false` (no implicit Enter). Use `ENTER` in `keys` or `--crlf` in the helper.
-- Supported terminal hosts are `conhost` and `wt`.
-- Omit `--terminal` unless you explicitly need to force a host.
-- Bare Windows command-script shims (e.g., `npm`, `npx`) are automatically detected and wrapped in a PowerShell `-File` script for interactive compatibility.
+```
+cmd_runner tail <run_id> [--follow] [-n N] [--text|--stdout] [--wait-ms N]
+```
+
+**Key facts:**
+
+- `cmd_runner tail <run_id>` (without `--follow`) reads the **full captured log** directly from disk (`stdout_text.log`). It works **after the run has finished** — no `--follow` needed.
+- `--follow` streams the output in real time. It **exits automatically** when the run reaches a terminal state.
+- `--follow --wait-ms 0` follows until the run finishes, then returns the full output. This is the simplest way to stream-to-completion.
+- `-n N` shows only the last N lines of the log.
+
+**Reading output after a run finishes (canonical flow):**
+
+```
+cmd_runner start -- python my_script.py       # returns run_id
+cmd_runner wait <run_id>                      # blocks until done
+cmd_runner tail <run_id>                      # reads full captured output
+cmd_runner tail <run_id> -n 50                # last 50 lines only
+```
+
+**Streaming output until completion:**
+
+```
+cmd_runner start -- long_command -- <args>    # returns run_id
+cmd_runner tail <run_id> --follow --wait-ms 0 # streams until run exits, then stops
+```
+
+**Note:** `--auto-tail N` (default 5, on `start`) and `--send-tail N` (default 3, on `send`) are **snapshots only** — they show the last N lines at that moment, not the full output. Use `cmd_runner tail <run_id>` for the complete log.
+
+### 4) Send input (inbox bridge)
+
+```
+cmd_runner send <run_id> --text "uptime" --crlf
+cmd_runner send <run_id> --keys "ctrl+c"
+cmd_runner send <run_id> --keys "TEXT:root,ENTER"
+cmd_runner send <run_id> --stdin-file FILEPATH
+cmd_runner send <run_id> --text-file FILEPATH
+cmd_runner send <run_id> --text "whoami" --text-as-b64 --crlf
+cmd_runner send <run_id> --hex 03
+```
+
+- `--keys` tokens: `LEFT,RIGHT,UP,DOWN,HOME,END,INSERT,DELETE,TAB,ESC,ENTER,BACKSPACE,ctrl+a..ctrl+z,TEXT:text,CHAR:char,HEX:hex`
+- `--crlf` appends CRLF after text.
+- Auto-tails last 3 lines after send (default; `--send-tail 0` to disable).
+
+**Quoting tips (PowerShell):**
+```
+cmd_runner send <id> --crlf -- "python3 -c 'print(1+2)'"
+cmd_runner send <id> --crlf -- 'echo ~~~hello~~~'           # ~ instead of "
+cmd_runner send <id> --crlf -- @'                           # PS here-string
+echo LINE1
+echo LINE2
+'@
+```
+
+### 5) Stop / Wait
+
+```
+cmd_runner stop <run_id> --reason "done"
+cmd_runner wait <run_id> [--timeout-s N] [--json]
+cmd_runner killall [--force] [--json]
+```
+
+## Terminal selection
+
+```
+cmd_runner start --terminal wezterm -- <command ...>
+cmd_runner start --terminal wt -- <command ...>
+cmd_runner start --terminal conhost -- <command ...>
+cmd_runner start --terminal alacritty -- <command ...>       # any exe on PATH
+```
+
+### Custom terminal arguments
+
+```
+cmd_runner start --terminal wezterm="--config-file ~/.config/wezterm/wezterm.lua" -- <command ...>
+cmd_runner start --terminal wt="-w new -d C:\project" -- <command ...>
+```
+
+### Auto-detection (default)
+
+| Priority | Windows | Linux |
+|----------|---------|-------|
+| 1 | wezterm | wezterm |
+| 2 | wt (Windows Terminal) | guake |
+| 3 | conhost | yakuake |
+| 4 | bash (git-bash) | xterm |
+| 5 | — | bash |
+
+First terminal found on PATH is used. Omit `--terminal` for auto-detection.
+
+## Image capture (--raw)
+
+**Important:** Raw mode is for non-interactive batch commands only. It does NOT support:
+- Interactive input (send/inbox)
+- TUI applications
+- Shell sessions
+
+When running image-rendering batch commands (`chafa`, `timg`, etc.):
+
+```
+cmd_runner start --raw -- <image_command ...>
+```
+
+- Raw pipes bypass ConPTY filtering — Kitty/Sixel/iTerm2 escape sequences survive.
+- Output is captured in logs with `[IMG:...]` markers.
+- Text-based tools (`tail`, `assert`, `snapshot`) work on clean text.
+- `--no-raw` forces ConPTY mode (no image capture in logs).
+
+## Screenshot
+
+```
+cmd_runner screenshot <run_id> [--out PATH]
+```
+
+- Captures a visible `--direct-terminal --terminal wt` window to PNG.
+- Without `--out`, writes `logs/cmd_runner/<run_id>/screenshot.png`.
+
+## Auto-tail options
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--auto-tail N` | 5 | After start, show last N lines |
+| `--send-tail N` | 3 | After send, show last N lines |
+| `--wait-ms N` | 500 | Delay before auto-tail (ms) |
+| `--tail-timeout N` | 0 | Retry tail up to N seconds |
+
+## Log layout
+
+```
+logs/cmd_runner/<run_id>/
+  meta.json       — session metadata (argv, cwd, normalized_argv, terminal)
+  state.json      — current state (status, exit_code, timestamps)
+  stdout.log      — captured output (with [IMG:...] markers in raw mode)
+  stdout_text.log — ANSI-stripped text
+  stderr.log      — stderr output
+  in.log          — inbox messages
+  inbox.jsonl     — input bridge (append JSONL to send input)
+  payload.cmd     — generated wrapper script (when applicable)
+```
+
+## SSH session example
+
+```
+cmd_runner start -- ssh root@host                       # start interactive SSH
+cmd_runner send <run_id> --text "uptime; df -h" --crlf  # send command
+cmd_runner send <run_id> --keys ctrl+c                  # interrupt
+cmd_runner send <run_id> --keys ctrl+d                  # end session
+```
+
+## Notes
+
+- Bare Windows script shims (npm, npx) auto-wrapped in PowerShell `-File`.
+- `.bat`/`.cmd` files auto-wrapped in `cmd.exe /c` to prevent `SearchPathW` AV.
+- `add_crlf` defaults to `false` (no implicit Enter).
+- All subprocess windows open minimized.
+- Direct-terminal Windows Terminal windows are the exception: they remain visible for graphics rendering and screenshot capture.
+- `wait` without `--timeout-s` blocks indefinitely.

@@ -1,0 +1,63 @@
+---
+description: ADID development methodology — gate-bound planning/logging surfaces, documentation reproducibility, task-type and response policies, security. Complements reasoning-kernel.mdc (agent governance) and the adm rule (tool routing).
+alwaysApply: true
+---
+
+## ADID Development Methodology
+
+Epistemic behavior (grounding, evidence, claim status) is governed by
+`reasoning-kernel.mdc`; adm tool operations by the adm rule. This rule owns the
+development **process detail**: what each planning surface contains, its scale
+threshold, reproducibility, and policy details. The kernel gate addons state
+*when* each surface is touched; this rule states *what goes into it*.
+
+## Gate binding of surfaces (who writes what, when)
+
+| Surface | Gate | Owner action |
+|---|---|---|
+| `plans/[ISO8601]_<description>.md` | G3 | create the plan (scale-dependent form, see below); smoke tests named before G4 |
+| `_development_plan.md` | G3 | create/update goal + task table with [COMPLETION] marks (a task is complete only if its related tests pass) |
+| `_progress_log.md` | G7 | one [TIMESTAMP] entry per bounded task: reason, script name, output |
+| `_application_workflow_diagram.md` | G7 | append module/function entries as surfaces change |
+| `plans_completed/` | G9 | move accomplished plans; scan `plans/` for stale refs |
+| `_application_workflow_diagram.md` coverage % | G9 | estimate coverage vs codebase at session end |
+| `docs/` + `index.md` | G9 | update when behavior/paths changed |
+
+## Plan form scales with task magnitude
+
+- **Spot fix** (single surface, no interface change): a one-paragraph plan inline — goal, change, oracle. Subtask files not required.
+- **Feature / multi-surface** (2+ surfaces or interface change): a plan file with a task table; subtask breakdown recommended.
+- **Architecture / greenfield / port**: full subtask files, each with abstract definition (math formalization, structural diagram, inputs/outputs), brief implementation, and test cases.
+
+## Documentation reproducibility (required)
+
+- Any document claiming a working state (`production`, `test`, `execution`) must carry the universal YAML header with a `reproduce:` block (files, commands, inputs, expected_outputs) within its first 30 lines. Full template: `docs/promotion.md`.
+- Maintain `DOCINDEX.md` at repo root as the documentation surface index (owners/entrypoints/last_verified); separate from `index.md`, the folder-based repository map.
+- **`last_verified` is verified-on-touch**: editing a surface updates its `last_verified`; a surface untouched for 90 days is reported as unverified in audits.
+- Keep `.github/PULL_REQUEST_TEMPLATE.md` aligned with DOCINDEX + reproducibility rules; when promoting research → production docs, include `docs/promotion.md` as the audit trail.
+- Keep `index.md` up to date: repository contents by folder (purpose + key entrypoints).
+
+## Workspace lanes (defaults, per-host override allowed)
+
+- Default lanes: `experiments/` (scratch), `futures/` (drafts), `obsolete/` (deprecated, reference only), `makeups/` (explicit stubs with a note explaining what is stubbed and why).
+- **Per-host override**: a host may remap or forbid lanes to satisfy its own stricter rules (e.g. a host that forbids mocks in tests will not bind `makeups/`); the host's governing document wins over these defaults. Kernel addons carry the host-specific mapping.
+
+## Task-type policies
+
+- **GREENFIELD WORK REQUIRES SOURCE COLLECTION + DETAILED PLAN.** If the task starts a new project, feature, or architecture without an existing implementation to port, first collect relevant source material, identify the governing references, and produce a detailed implementation plan before coding.
+- **TRANSLATION / PORT / REPLICATION MEANS REPLICATE.** If the user asks to translate, port, mirror, clone, replicate, or re-implement an existing project or behavior in another language or codebase, the existing implementation is the primary source of truth. Reproduce it as closely as the target platform allows; do not redesign, simplify, or substitute a different architecture unless the user explicitly asks for alternatives.
+- **CONTROL STUBS ARE FOR VERIFICATION, NOT SUBSTITUTION.** Explicit control stubs, probes, harnesses, or temporary verification scaffolds are allowed to check parity or isolate behavior, but they must be clearly labeled and must not replace the real implementation target.
+
+## Response policies
+
+- If the request carries a `web:` prefix, do verified multi-source internet search first, then answer with references. (Plain relative paths like `./scripts/x.sh` are commands, not search triggers.)
+- If any part is unsafe or unethical, omit it and label `(Filtered)` while continuing with the safe remainder.
+
+## Security & Configuration
+
+- **No Hardcoded Secrets:** Never commit secrets. Use the OS keyring or an ignored local config file (tool command: see adm-exe skill). Logging: Never log sensitive data (tokens, passwords, etc.). Least Privilege: Minimize permissions for any credentials used.
+- **Sensitive data handling (strict):**
+  - Do not request or encourage users to paste API keys/tokens/passwords into chat or into tracked files/commands.
+  - If a user provides a token anyway, treat it as sensitive: do not repeat it, do not write it to git-tracked files, and do not include it in shell commands or logs.
+  - **Environment variables are considered insecure for secrets** (leakage via child processes, crash dumps, diagnostic output, etc.); do not recommend them for tokens/keys.
+  - Use secure local storage + gitignore instead: OS keyring, or a local-only configuration file that is not committed.

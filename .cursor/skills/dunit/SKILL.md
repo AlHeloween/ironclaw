@@ -1,9 +1,12 @@
 ---
 name: dunit
 description: Run and maintain Delphi DUnit tests for Delphi projects.
+kernel-gates: [G8]
 ---
 
 # dunit
+
+**Kernel gates:** G8 (DUnit runs are oracle instruments — pass pins Exact) — see reasoning-kernel.mdc.
 
 ## Purpose
 
@@ -30,13 +33,13 @@ Provide a reliable workflow for building and running Delphi DUnit tests (console
 
 ## Typical project layout
 
-- Test project: `artefacts\examples\project-agnostic\tests\ProjectTests.dpr`
-- Test units: `artefacts\examples\project-agnostic\tests\TestCore.pas`, `artefacts\examples\project-agnostic\tests\TestServices.pas`
+- Test project: `docs\examples\tests\ProjectTests.dpr` (in-repo fixture: `artefacts\examples\tests\ProjectTests.dpr`)
+- Test units: `docs\examples\tests\TestCore.pas`, `docs\examples\tests\TestServices.pas`
 
 ## How to add a new test
 
 1. Add a new unit such as `tests\TestSomething.pas`.
-2. Register it in the local DUnit project file. See `artefacts\examples\project-agnostic\tests\ProjectTests.dpr` for the documentation fixture.
+2. Register it in the local DUnit project file. See `docs\examples\tests\ProjectTests.dpr` for the documentation fixture.
 3. Re-run the local DUnit test command.
 
 ## Notes

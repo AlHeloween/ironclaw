@@ -1,9 +1,12 @@
 ---
 name: delphi_builder
 description: Build Delphi (VCL/FMX) projects from the command line with MSBuild, including environment initialization (MSVC + rsvars).
+kernel-gates: [G7, G8]
 ---
 
 # delphi_builder
+
+**Kernel gates:** G7 (build the implementation), G8 (build success as oracle evidence) — see reasoning-kernel.mdc.
 
 ## Goal
 
@@ -85,7 +88,7 @@ Project automation commonly chains the same three setup/build steps for a concre
 ```
 call tools\init_msvc.cmd
 call tools\init_delphi.cmd Win64
-call tools\build_delphi_msbuild.cmd artefacts\examples\project-agnostic\delphi\ProjectTool.dpr Win64 Release
+  call tools\build_delphi_msbuild.cmd docs\examples\delphi\ProjectTool.dpr Win64 Release
 ```
 
 This fixture path is for documentation. Replace it with the real project's `.dpr` path before running the command.
@@ -100,10 +103,10 @@ This fixture path is for documentation. Replace it with the real project's `.dpr
    - PowerShell (dot-source): `. .\\tools\\init_delphi.ps1 -Platform Win64`
 3. Build:
    - Prefer wrapper (auto-generates `.dproj` from `.dpr` when missing):
-     - `tools\\build_delphi_msbuild.cmd artefacts\\examples\\project-agnostic\\delphi\\ProjectTool.dpr Win32 Release`
-     - `tools\\build_delphi_msbuild.cmd artefacts\\examples\\project-agnostic\\delphi\\ProjectTool.dpr Win64 Release`
+     - `tools\\build_delphi_msbuild.cmd docs\\examples\\delphi\\ProjectTool.dpr Win32 Release`
+     - `tools\\build_delphi_msbuild.cmd docs\\examples\\delphi\\ProjectTool.dpr Win64 Release`
    - PowerShell wrapper:
-     - `.\\tools\\build_delphi_msbuild.ps1 -Dpr artefacts\\examples\\project-agnostic\\delphi\\ProjectTool.dpr -Platform Win64 -Config Release`
+     - `.\\tools\\build_delphi_msbuild.ps1 -Dpr docs\\examples\\delphi\\ProjectTool.dpr -Platform Win64 -Config Release`
 
 Project-specific shortcuts may wrap these commands; inspect local scripts before using them.
 

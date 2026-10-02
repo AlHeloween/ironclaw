@@ -1,18 +1,21 @@
 ---
 name: adm-exe
 description: Use the ADID Update Manager (adm) executable for declarative updates, verify-all, rollback, and templates.
+kernel-gates: [G7, G8]
 ---
 
 # ADID Update Manager (adm) executable
 
-Use this skill when performing declarative file updates, verification, rollback, or template workflows in a project that uses the ADID framework.
+Use this skill only when performing `updates/*.xml` descriptor creation, application, replay, validation, rollback, or repair in a project that uses the ADID framework. For ordinary source, documentation, configuration, and test edits, use `apply_patch` directly.
+
+**Kernel gates:** G7 (apply planned mutations under the authorized envelope), G8 (verify-all / rollback as oracle and divergence recovery) — see reasoning-kernel.mdc.
 
 ## Critical: Do not create XML descriptors from scratch
 
-**Always use adm commands to get templates and fill them.** Do not hand-craft `updates/*.xml` or invent `<update_md5_*>`, `<content_md5_*>`, or mode syntax from memory.
+**Always use adm commands to get templates and fill them for XML descriptor work.** Do not hand-craft `updates/*.xml` or invent `<update_md5_*>`, `<content_md5_*>`, or mode syntax from memory. Do not use XML descriptors to modify ordinary files.
 
 1. **First:** Run `tools/adm --help` (or `tools/adm.exe --help` on Windows; or `python -m adm --help` when tools/adm not present) to see all commands.
-2. **To add a new update:** Create template (`tools/adm.exe --template/--tpl <NAME> [output_dir]` - Generate a timestamped XML descriptor template under `./updates/` by default (use `[TIMESTAMP]_[short_semantic_dominant].xml`; legacy `_update_scaffold.xml` is deprecated). Templates: `all`, `replace`, `overwrite`, `create`, `insert`, `delete`, `pattern-rule`, `binary-overwrite`, `binary-hex-replace`, `refactor-replace-function`), edit the generated descriptor in `updates/` (prefer using the agent `apply_patch` tool for XML edits), then apply (`--apply`). To **replay history** (inspect descriptors in chronological order; information-only by default): use `--replay-updates [dir] [--until TIMESTAMP] [--limit N]` (add `--unified-diff` for exact hunks; add `--execute --workdir DIR --confirm-execute APPLY_IN_WORKDIR_ONLY` to apply only inside an isolated copy). Do not write XML descriptors from scratch. Multiple backups per file are by design and an advantage (rollback, traceability; project stays manageable).
+2. **To add a new update:** Create template (`tools/adm.exe --template/--tpl <NAME> [output_dir]` — Generate a timestamped XML descriptor template under `./updates/` by default (use `[TIMESTAMP]_[short_semantic_dominant].xml`; legacy `_update_scaffold.xml` is deprecated). Templates: `all`, `replace`, `overwrite`, `create`, `insert`, `delete`, `pattern-rule`, `binary-overwrite`, `binary-hex-replace`, `refactor-replace-function`), edit the generated descriptor in `updates/` (prefer using the agent `apply_patch` tool for XML edits), then apply (`--apply`). To **replay history** (inspect descriptors in chronological order; information-only by default): use `--replay-updates [dir] [--until TIMESTAMP] [--limit N]` (add `--unified-diff` for exact hunks; add `--execute --workdir DIR --confirm-execute APPLY_IN_WORKDIR_ONLY` to apply only inside an isolated copy). Do not write XML descriptors from scratch. Multiple backups per file are by design and an advantage (rollback, traceability; project stays manageable).
 3. **Never** write a new descriptor XML from scratch; you will get tags, MD5, or modes wrong. Use the template, then edit.
 
 ADID workflow and communication rules are in the project-local `docs/ADID_Framework_<version>.md` when installed. Prefer the newest available framework document for structure and epistemic markers.
@@ -23,7 +26,7 @@ ADID workflow and communication rules are in the project-local `docs/ADID_Framew
 
 **Use `tools/adm` (or `tools/adm.exe` on Windows) when the project has it; otherwise `python -m adm`.**
 
-- **Primary:** `tools/adm` (Unix) or `tools/adm.exe` (Windows) when the project has adm installed there (e.g. after `--install-adid-rules`). That executable is stable; if you edit the tool with adm and there is an error, you cannot run adm anymore and the toolchain breaks—the copy in `tools/` avoids that.
+- **Primary:** `tools/adm` (Unix) or `tools/adm.exe` (Windows) when the project has adm installed there. That executable is stable; if you edit the tool with adm and there is an error, you cannot run adm anymore and the toolchain breaks—the copy in `tools/` avoids that.
 - **Fallback:** `python -m adm` with the same subcommands when tools/adm is not present (e.g. in the adm repo before install).
 
 **Rule:** Use `tools/adm` when present—same as AGENTS.md; avoids misunderstanding and toolchain break when editing the tool with adm.
@@ -47,15 +50,14 @@ Invoke as: `tools/adm <command>` (or `tools/adm.exe <command>` on Windows; or `p
 | `--rollback <file>` | Restores the file from the latest backup (per-file). | When a single file is corrupted or wrong; do **not** use git restore for one bad edit. |
 | `--list-backups <file>` | Lists backups for the file (timestamp, size, MD5, semantics). | To see what rollback will restore or to inspect history. |
 | `--list-diff <file> [N]` | Shows unified or hex diffs against up to N backups. | To compare current vs previous versions before rollback. |
-| `--emit-boot-log [roots...]` | Runs pytest then verify-all; writes `boot_test.log` and verify reports. | One-shot “boot” check: tests + verification. |
-| `--install-adid-rules [target_dir]` | Installs Cursor rules, adm-exe skill, framework doc, and `adm.exe` into the target project. | To onboard a project with ADID (creates `.cursor/`, `docs/`, `tools/adm.exe`). |
+| `--emit-boot-log [roots...]` | Runs pytest then verify-all; writes `boot_test.log` and verify reports. | One-shot "boot" check: tests + verification. |
 | `--snapshot-context [snapshot.json]` | Captures repo context (git head, detected lockfiles, tool versions) to a JSON file. | Before major changes; then use `--preflight` to detect drift. |
 | `--preflight [snapshot.json] [--strict]` | Compares current tree to snapshot; `--strict` fails on drift. | After changes to ensure nothing unintended changed. |
 | `--clean [root] [--all]` | Removes manifests, rotated backups, demo bundles. With `--all`, also removes baseline snapshots (`*.baseline`), JSONL ledgers (`*.adid.log.jsonl`), and strips trailing `ADID_ROLLBACK`/`SDID_ROLLBACK` blocks from text files. | To tidy artifacts under the given root (use `--all` only when you want a full cleanup). |
 | `--rg <pattern> <replacement> <file> [-- flags]` | ripgrep-based replacement with backup and ledger. | When you need regex replace but want backups/rollback; use via adm, not raw rg. |
 | `--sed <script> <file> [-- flags]` | Runs GNU sed with backup and ledger. | When you need sed but want backups/rollback; use via adm, not raw sed. |
-| `--patch-tool <patch_file>` | Applies an `apply_patch`-format patch file with backups + per-file ledger entries. | When you want apply_patch-style edits but still want ADID backups and ledgers. |
-| `--move <src> <dst> [--execute] [--no-fix-updates] [--no-fix-refs] [--updates-dir DIR] [roots...]` | Move/rename a file and rewrite occurrences of the old path in `updates/` and other roots (literal, handles both `/` and `\\`). | When you rename/move a file and want to keep `updates/` descriptors + docs/code references consistent. **Dry-run by default**; pass `--execute` to perform writes. |
+| `--patch-tool <patch_file>` | Applies an `apply_patch`-format patch file with backups + per-file ledger entries. | Only to repair an existing XML update descriptor through its own XML workflow; use `apply_patch` directly for ordinary edits. |
+| `--move <src> <dst> [--execute] [--no-fix-updates] [--no-fix-refs] [--updates-dir DIR] [roots...]` | Move/rename a file and rewrite occurrences of the old path in `updates/` and other roots (literal, handles both `/` and `\`). | When you rename/move a file and want to keep `updates/` descriptors + docs/code references consistent. **Dry-run by default**; pass `--execute` to perform writes. |
 | `--cmd-runner <args...>` | Pass-through helper to execute `cmd_runner` with the given args (Windows-only). | When you need to start/list/status/tail cmd_runner runs but want it recorded in the same adm progress-log cycle. |
 | `--rag settings|list|index|docs|status|delete ...` | Manage local RAG indexes (sqlite) using `adm.json`. | When you want indexed querying of code/docs with the local `sentence_transformers` + `BAAI/bge-base-en-v1.5` embedder. In bundled installs, `adm.exe` forwards this to `adm-rag.exe`. |
 | `--query <index_name> <request...>` | Query a RAG index and print top hits (file + line ranges). | When you want an exact, line-referenced retrieval result. In bundled installs, `adm.exe` forwards this to `adm-rag.exe`. |
@@ -63,12 +65,13 @@ Invoke as: `tools/adm <command>` (or `tools/adm.exe <command>` on Windows; or `p
 | `--log-insight <message>` | Appends a timestamped entry to `insights.md`. | Optional logging of a decision or finding. |
 | `--check-tools` | Checks that rg, sed, astgrep, tree-sitter are available. | To diagnose missing tools. |
 | `--sync-astgrepignore` | Mirrors `.gitignore` into `.astgrepignore`. | When .gitignore changed and you want astgrep to match. |
+| `--keyring set|delete|status` | Manage secrets in OS keyring (preferred for embedding API keys). | When configuring RAG embedder auth; service=`adid_framework_secrets`, name=`adid_python_rag`. |
 | `--log-progress [path]` | Appends progress entries (default `_progress_log.md`). | To record that a command ran and its outcome. |
 | `--dry-run` | Simulates actions without writing to disk. | With `--apply` or other mutating commands to preview. |
 
 ---
 
-## Recommended workflow for a new update
+## Recommended workflow for a new XML update descriptor
 
 Use `tools/adm` (or `tools/adm.exe` on Windows) when the project has it; otherwise `python -m adm`.
 
@@ -83,7 +86,7 @@ To **replay history** (inspect descriptors in order): run `tools/adm --replay-up
 
 All mutations create backups and ledger entries; use `--rollback <file>` to undo a single file. Do not use git restore for one bad edit—use rollback.
 
-**From now on, use this toolset:** template → edit the descriptor file → apply. **Use `tools/adm`** (or `tools/adm.exe` on Windows) when the project has it—same as AGENTS.md; stable executable, toolchain stays intact if you edit the tool with adm and hit an error. Multiple backups per file are intentional and beneficial (rollback, traceability); the project stays manageable while saving time and giving a clear, testable way to use the tool across different areas.
+**For XML descriptors only, use this toolset:** template → edit the descriptor file → apply. For all other file changes, use `apply_patch` directly. Multiple backups per XML descriptor are intentional and beneficial for descriptor rollback and traceability.
 
 Bundled binary split note:
 - `adm.exe` is now the lightweight base CLI.
@@ -92,38 +95,24 @@ Bundled binary split note:
 
 ## Building Executables
 
-When working in the `adm` source repository, use its local build script. In other projects, treat executable builds as project-specific and inspect the local build documentation first. Concrete fixture for expected script names: `artefacts/examples/project-agnostic/scripts/`.
+When working in the `adm` source repository, use its local build script. In other projects, treat executable builds as project-specific and inspect the local build documentation first.
 
 ~~~bash
-# Build all executables with Nuitka (recommended)
-python <real_build_pipeline>/_build.py
+# Build all executables
+python scripts/internal/_build.py
 
 # Build specific components
-python <real_build_pipeline>/_build.py --adm                    # Only adm.exe
-python <real_build_pipeline>/_build.py --adm --adm-rag          # adm.exe + adm-rag.exe
+python scripts/internal/_build.py --adm                    # Only adm.exe
+python scripts/internal/_build.py --adm --adm-rag          # adm.exe + adm-rag.exe
 
 # Build modes
-python <real_build_pipeline>/_build.py --fast                   # Quick build (faster)
-python <real_build_pipeline>/_build.py --release                # Release build (optimized)
-
-# Legacy PyInstaller (bundles torch, ~200MB+)
-python <real_build_pipeline>/_build.py --backend=pyinstaller
+python scripts/internal/_build.py --fast                   # Quick build (faster)
+python scripts/internal/_build.py --release                # Release build (optimized)
 
 # Get help
-python <real_build_pipeline>/_build.py --help
+python scripts/internal/_build.py --help
 ~~~
 
-**Build backends:**
-- **Nuitka** (default): Smaller executables (~10-20MB), PyTorch detected at runtime
-- **PyInstaller** (legacy): Larger executables (~200MB+), torch bundled
+**Build backend:** Constrained PyInstaller. Torch/CUDA packages are not bundled; the RAG helper detects torch at runtime.
 
-**RAG Prerequisites (Nuitka builds):**
-Nuitka executables do not bundle PyTorch. Install it separately:
-~~~bash
-# CPU version
-python -m pip install torch sentence-transformers
-
-# CUDA version (for GPU acceleration)
-python -m pip install torch sentence-transformers --index-url https://download.pytorch.org/whl/cu121
-~~~
-
+**Release:** `python scripts/release.py` or `_release.cmd` for a full release bundle (exes + artefacts + Delphi installer + logs).
